@@ -1,0 +1,15 @@
+baseurl = "http://datanerds.io/"
+languageCode = "en-us"
+title = "datanerds.io"
+
+[Params]
+  logo = "img/logo.png"
+  github = "https://github.com/datanerds-io"
+  showsRSS = true
+  copyright = "lalal"
+  GoogleAnalytics = ""
+
+ [taxonomies]
+  tag = "tags"
+  category = "categories"
+  series = "series"
