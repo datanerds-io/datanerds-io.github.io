@@ -6,10 +6,10 @@ title = "datanerds.io"
   logo = "img/logo.png"
   github = "https://github.com/datanerds-io"
   showsRSS = true
-  copyright = "lalal"
-  GoogleAnalytics = ""
+  copyright = "Copyright © 2016 datanerds.io. <a href=\"http://creativecommons.org/licenses/by/4.0/\">Some rights reserved</a>."
+  analytics = "UA-75585044-1"
 
- [taxonomies]
+[taxonomies]
   tag = "tags"
   category = "categories"
   series = "series"

@@ -4,7 +4,7 @@
   <footer role="contentinfo">
     <div style="text-align:center;">
       {{ with .Site.Params.profile }}<img src="{{ . }}" width="64" height="64"><br>{{ end }}
-      {{ .Site.Params.copyright }}
+      {{ .Site.Params.copyright | safeHTML }}
     </div>
   </footer>
 
