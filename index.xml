@@ -6,16 +6,50 @@
     <description>Recent content on datanerds.io</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Thu, 24 Mar 2016 23:48:44 +0100</lastBuildDate>
+    <lastBuildDate>Sat, 26 Mar 2016 18:41:00 +0100</lastBuildDate>
     <atom:link href="http://datanerds.io/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
-      <title>test</title>
-      <link>http://datanerds.io/post/test/</link>
-      <pubDate>Thu, 24 Mar 2016 23:48:44 +0100</pubDate>
+      <title>LACK - Consensus via Cassandra</title>
+      <link>http://datanerds.io/post/lack-initial-release/</link>
+      <pubDate>Sat, 26 Mar 2016 18:41:00 +0100</pubDate>
       
-      <guid>http://datanerds.io/post/test/</guid>
-      <description></description>
+      <guid>http://datanerds.io/post/lack-initial-release/</guid>
+      <description>
+
+&lt;p&gt;In late 2014 DataStax published a &lt;a href=&#34;http://www.datastax.com/dev/blog/consensus-on-cassandra&#34;&gt;blog post&lt;/a&gt; in which they explain how Cassandra can be leveraged in order to reach consensus in a distributed environment. A detailed explanation can be found in mentioned article. In essence, a distributed lock or mutex mechanism to enforce that only one resource in a distributed and concurrent environment can be changed at the same time. Inspired by said article &lt;em&gt;LACK [luhk]&lt;/em&gt; was implemented. It is a very thin Java API on top of a few Cassandra queries. It is not meant as a consensus library such as libraft or atomix. We just needed something implemented fast and on top of Cassandra.&lt;/p&gt;
+
+&lt;h1 id=&#34;creating-a-keyspace:4c3eebe67ae7f1eaa363e959b2cef1d7&#34;&gt;Creating a keyspace&lt;/h1&gt;
+
+&lt;p&gt;In order to run LACK you have to point it to a keyspace in which it can create necessary table.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;CREATE KEYSPACE lack
+    WITH REPLICATION = { &#39;class&#39; : &#39;SimpleStrategy&#39;, &#39;replication_factor&#39; : 1 };
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h1 id=&#34;locking:4c3eebe67ae7f1eaa363e959b2cef1d7&#34;&gt;Locking&lt;/h1&gt;
+
+&lt;p&gt;The configuration of LACK is done via the &lt;code&gt;LackConfig&lt;/code&gt; POJO, e.g. using this constructor: &lt;code&gt;LackConfig(String username, String password, String[] nodes, String keyspace, int ttlInSeconds)&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;Connecting to a a local cluster using the previously created keyspace and a TTL of 42 seconds:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-java&#34;&gt;LackConfig config = new LackConfig(&amp;quot;user&amp;quot;, &amp;quot;pass&amp;quot;, new String[]{&amp;quot;127.0.0.1&amp;quot;}, &amp;quot;lack&amp;quot;, 42);
+Lack lack = new Lack(config, &amp;quot;owner-1&amp;quot;);
+
+// Locking the resource:
+lack.acquire(&amp;quot;user-1&amp;quot;);
+...
+// Renewing the lock in case we need longer than 42 seconds:
+lack.renew(&amp;quot;user-1&amp;quot;);
+...
+// Releasing the lock in case we have finished our operation:
+lack.release(&amp;quot;user-1&amp;quot;);
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;In case one of the above mentioned methods can not be executed since e.g. a resource might already be locked, a &lt;code&gt;LackException&lt;/code&gt; will be thrown. To make sure you implement a logic for such cases, it is a checked exception.&lt;/p&gt;
+
+&lt;p&gt;To find some more resource take a look here: &lt;a href=&#34;https://github.com/datanerds-io/lack/&#34;&gt;GitHub&lt;/a&gt;, &lt;a href=&#34;http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22io.datanerds%22%20a%3A%22lack%22&#34;&gt;Maven Central&lt;/a&gt;&lt;/p&gt;
+</description>
     </item>
     
   </channel>
