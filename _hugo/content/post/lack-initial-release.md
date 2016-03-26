@@ -1,15 +1,13 @@
 +++
-date = "2016-03-24T20:48:27+01:00"
+date = "2016-03-26T18:41:00+01:00"
 draft = false
 title = "LACK - Consensus via Cassandra"
-tags = ["java", "Cassandra", "consensus", "LACK"]
+tags = ["java", "Cassandra", "consensus", "lock","LACK"]
 author = "Lars"
 
 +++
 
-In late 2014 DataStax published a [blog post](http://www.datastax.com/dev/blog/consensus-on-cassandra) in which they explain how Cassandra can be leveraged in order to reach consensus in a distributed environment. A detailed explanation can be found in mentioned article.
-
-Inspired by said article _LACK [luhk]_ was implemented, a very thin Java API on top of a few Cassandra queries. Disclaimer: It is not meant as a consensus library such as libraft or atomix. We just needed something implemented fast and on top of Cassandra.
+In late 2014 DataStax published a [blog post](http://www.datastax.com/dev/blog/consensus-on-cassandra) in which they explain how Cassandra can be leveraged in order to reach consensus in a distributed environment. A detailed explanation can be found in mentioned article. In essence, a distributed lock or mutex mechanism to enforce that only one resource in a distributed and concurrent environment can be changed at the same time. Inspired by said article _LACK [luhk]_ was implemented. It is a very thin Java API on top of a few Cassandra queries. It is not meant as a consensus library such as libraft or atomix. We just needed something implemented fast and on top of Cassandra.
 
 # Creating a keyspace
 In order to run LACK you have to point it to a keyspace in which it can create necessary table.
