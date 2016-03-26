@@ -206,6 +206,7 @@ article code {
   margin: 0 3px;
   border: 1px solid #ccc;
   font-family: "Source Code Pro", "Courier New", monospace;
+  font-size: 13px;
 }
 article pre code {
   font-family: "Source Code Pro", "Courier New", monospace;
