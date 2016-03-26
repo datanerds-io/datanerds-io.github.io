@@ -16,6 +16,14 @@ CREATE KEYSPACE lack
     WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 };
 ```
 # Locking
+You can import LACK from Maven Central Repository:
+```xml
+<dependency>
+    <groupId>io.datanerds</groupId>
+    <artifactId>lack</artifactId>
+    <version>0.1.1</version>
+</dependency>
+```
 The configuration of LACK is done via the `LackConfig` POJO, e.g. using this constructor: `LackConfig(String username, String password, String[] nodes, String keyspace, int ttlInSeconds)`.
 
 Connecting to a a local cluster using the previously created keyspace and a TTL of 42 seconds:

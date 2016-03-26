@@ -92,6 +92,15 @@
 
 <h1 id="locking:4c3eebe67ae7f1eaa363e959b2cef1d7">Locking</h1>
 
+<p>You can import LACK from Maven Central Repository:</p>
+
+<pre><code class="language-xml">&lt;dependency&gt;
+    &lt;groupId&gt;io.datanerds&lt;/groupId&gt;
+    &lt;artifactId&gt;lack&lt;/artifactId&gt;
+    &lt;version&gt;0.1.1&lt;/version&gt;
+&lt;/dependency&gt;
+</code></pre>
+
 <p>The configuration of LACK is done via the <code>LackConfig</code> POJO, e.g. using this constructor: <code>LackConfig(String username, String password, String[] nodes, String keyspace, int ttlInSeconds)</code>.</p>
 
 <p>Connecting to a a local cluster using the previously created keyspace and a TTL of 42 seconds:</p>
