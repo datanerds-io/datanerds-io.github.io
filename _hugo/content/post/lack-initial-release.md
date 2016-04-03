@@ -3,7 +3,7 @@ date = "2016-03-26T18:41:00+01:00"
 draft = false
 title = "LACK - Consensus via Cassandra"
 tags = ["java", "Cassandra", "consensus", "lock","LACK"]
-author = "Lars"
+authors = ["Lars"]
 
 +++
 
