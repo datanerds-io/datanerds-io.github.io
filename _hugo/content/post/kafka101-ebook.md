@@ -1,6 +1,6 @@
 +++
 date = "2015-11-24T16:13:29+02:00"
-draft = true
+draft = false
 title = "Apache Kafka eBook"
 tags = ["java", "Kafka"]
 authors = ["Lars"]

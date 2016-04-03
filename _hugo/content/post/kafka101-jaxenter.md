@@ -1,6 +1,6 @@
 +++
 date = "2015-10-28T19:21:00+02:00"
-draft = true
+draft = false
 title = "Kafka 101 at JAXenter.de"
 tags = ["java", "Kafka", "JAX"]
 authors = ["Lars"]
