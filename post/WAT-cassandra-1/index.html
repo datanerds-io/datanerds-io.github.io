@@ -1,0 +1,301 @@
+
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+
+  
+  <meta charset="UTF-8">
+  <title>
+    WAT - Cassandra | datanerds.io
+  </title>
+
+
+  
+  <meta name="viewport" content="width=device-width,user-scalable=no,maximum-scale=1,initial-scale=1">
+
+  
+  <link rel="canonical" href="http://datanerds.io/post/WAT-cassandra-1/"/>
+
+  
+  <link rel="stylesheet" href="/css/sanitize.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+  <link rel="stylesheet" href="/css/highlight_monokai.css">
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/custom.css">
+
+  
+  <link href="http://datanerds.io/index.xml" rel="alternate" type="application/rss+xml" title="datanerds.io" />
+  <link href="http://datanerds.io/index.xml" rel="feed" type="application/rss+xml" title="datanerds.io" />
+
+  
+  
+
+
+</head>
+
+
+
+<body>
+<div class="container">
+
+  
+  <header role="banner">
+    <div class="row gutters">
+      <div id="social" class="col span_10">
+        <ul>
+          
+          
+          <li><a href="https://github.com/datanerds-io" target="_blank">GitHub</a></li>
+          <li><a href="http://datanerds.io/index.xml" type="application/rss+xml" target="_blank">RSS</a></li>
+        </ul>
+      </div>
+      <div id="site-title" class="col right span_2">
+        <a href="http://datanerds.io/"><img src="http://datanerds.io//img/logo.png"/></a>
+        
+      </div>
+    </div>
+  </header>
+
+
+  
+  <main id="single" role="main">
+    <div class="article-header">
+      <h1>WAT - Cassandra</h1>
+      <div class="meta">
+        Apr 11, 2016
+        by 
+            <a href="/authors/frank">Frank</a>,
+        
+            <a href="/authors/lars">Lars</a>,
+        
+            &nbsp;
+        
+          #<a href="/tags/cassandra">cassandra</a>&nbsp;
+        
+          #<a href="/tags/wat">WAT</a>&nbsp;
+        
+      </div>
+    </div>
+    <article>
+      
+
+<p>When using Cassandra*, you sometimes have these <em>WAT</em> moments. If you don&rsquo;t know what we are talking about, just take a short <a href="https://www.destroyallsoftware.com/talks/wat">detour</a>.</p>
+
+<p>Taking a step back and figuring out what things are built for is usually a good idea, so what was Cassandra envisioned for?</p>
+
+<blockquote>
+<p>Cassandra does not support a full relational data model; instead, it provides clients with a simple data model that supports dynamic control over data layout and format.</p>
+
+<p>&ndash; <cite><a href="https://www.facebook.com/notes/facebook-engineering/cassandra-a-structured-storage-system-on-a-p2p-network/24413138919/">Original Cassandra Paper</a></cite></p>
+</blockquote>
+
+<p>Cool, sounds like a a reasonable statement. When we started using Cassandra we had to develop an application with a dynamic data model. Amongst other features this made us giving Cassandra a shot. So here is how altering Cassandra tables leads to some WAT&rsquo;s.</p>
+
+<h1 id="setting-up-the-environment:32f0145a202aaa4315a6d4f1c34a7c39">Setting up the environment</h1>
+
+<p>First of all we need a keyspace to play around with:</p>
+
+<pre><code class="language-sql">cqlsh&gt; CREATE KEYSPACE fun WITH replication ={'class': 'SimpleStrategy',
+    'replication_factor': 1 };
+cqlsh&gt; USE fun;
+</code></pre>
+
+<h1 id="collection-column-re-use:32f0145a202aaa4315a6d4f1c34a7c39">Collection Column re-use</h1>
+
+<p>Let&rsquo;s now have a simple table with an identifier and a collection column</p>
+
+<pre><code class="language-sql">cqlsh:fun&gt; CREATE TABLE hello (id uuid, world list&lt;int&gt;, PRIMARY KEY (id));
+</code></pre>
+
+<p>Damn&hellip; we used the wrong type, it rather should be a list of <code>varchar</code>. No problem</p>
+
+<pre><code class="language-sql">cqlsh:fun&gt; ALTER TABLE hello DROP world;
+cqlsh:fun&gt; ALTER TABLE hello ADD world list&lt;varchar&gt; ;
+Bad Request: Cannot add a collection with the name world because a collection
+with the same name and a different type has already been used in the past
+</code></pre>
+
+<p><img src="/img/wat/wat1.jpg" alt="" /></p>
+
+<h1 id="be-prepared-forever:32f0145a202aaa4315a6d4f1c34a7c39">Be prepared! FOREVER!</h1>
+
+<p>Let&rsquo;s take a look at the java driver. Initially we create a simple test table with two columns. The <code>id</code> column being the primary key and an arbitrary text column called <code>initial_column</code>.</p>
+
+<pre><code class="language-sql">cqlsh:fun&gt; CREATE TABLE test(
+    id text,
+    initial_column text,
+    PRIMARY KEY (id));
+</code></pre>
+
+<p>When we prepare a <code>SELECT *</code> statement on that table, bind and execute it the returned column definitions are as expected <code>[id, initial_column]</code>.</p>
+
+<pre><code class="language-java">Cluster cluster = Cluster.builder().addContactPoints(&quot;localhost&quot;).build();
+Session session = cluster.connect(&quot;fun&quot;);
+PreparedStatement prepared = session.prepare(&quot;select * from test&quot;);
+ResultSet result = session.execute(prepared.bind());
+logger.info(&quot;Columns before alter table: {}&quot;, getColumnDefinitions(result));
+// Columns before alter table: [id, initial_column]
+
+</code></pre>
+
+<p>Ok, now we figured we need an additional column. It&rsquo;s as easy as this:</p>
+
+<pre><code class="language-sql">cqlsh:fun&gt; ALTER TABLE test ADD new_column text;
+</code></pre>
+
+<p>Let&rsquo;s bind the prepared statement again and take a look at the returned columns:</p>
+
+<pre><code class="language-java">result = session.execute(prepared.bind());
+logger.info(&quot;Columns after alter table: {}&quot;, getColumnDefinitions(result));
+// Columns after alter table: [id, initial_column]
+</code></pre>
+
+<p>Hmmm, where&rsquo;s the new column? Nevermind, just re-preparing the statement should fix the problem, shouldn&rsquo;t it?</p>
+
+<pre><code class="language-java">prepared = session.prepare(&quot;select * from test&quot;);
+result = session.execute(prepared.bind()); // Cassandra Warning: &quot;Re-preparing already prepared query select * from test. Please note that preparing the same query more than once is generally an anti-pattern and will likely affect performance. Consider preparing the statement only once.&quot;
+logger.info(&quot;Columns after re-prepare: {}&quot;, getColumnDefinitions(result));
+// Columns after re-prepare: [id, initial_column]
+</code></pre>
+
+<p><img src="/img/wat/wat2.jpg" alt="" /></p>
+
+<p>Check whether really the new column got added (without using the prepared statement):</p>
+
+<pre><code class="language-java">result = session.execute(&quot;select * from test&quot;);
+logger.info(&quot;Columns after unprepared execute: {}&quot;, getColumnDefinitions(result));
+// Columns after unprepared execute: [id, initial_column, new_column]
+</code></pre>
+
+<p>Yup, the column is there. So let&rsquo;s investigate whether creating a new <code>Session</code> with the cluster helps:</p>
+
+<pre><code class="language-java">session.close();
+session = cluster.connect(&quot;fun&quot;);
+prepared = session.prepare(&quot;select * from test&quot;); // Cassandra Warning: &quot;Re-preparing already prepared query select * from test. Please note that preparing the same query more than once is generally an anti-pattern and will likely affect performance. Consider preparing the statement only once.&quot;
+result = session.execute(prepared.bind());
+logger.info(&quot;Columns recreating session via re-connect on cluster: {}&quot;, getColumnDefinitions(result));
+// Columns recreating session via re-connect on cluster: [id, initial_column]
+</code></pre>
+
+<p>Nope. Apparently only re-instantiating the cluster does the job:</p>
+
+<pre><code class="language-java">session.close();
+cluster.close();
+session = Cluster.builder().addContactPoints(&quot;localhost&quot;).build().connect(&quot;fun&quot;);
+prepared = session.prepare(&quot;select * from test&quot;);
+result = session.execute(prepared.bind());
+logger.info(&quot;Columns after recreating session via re-instantiating cluster: {}&quot;, getColumnDefinitions(result));
+// Columns after recreating session via re-instantiating cluster: [id, initial_column, new_column]
+</code></pre>
+
+<p>Since the prepared statements are identified by the hash of the query string, altering this statement e.g. through adding useless whitespaces gets you a fresh prepared statement.</p>
+
+<p><img src="/img/wat/wat4.jpg" alt="" /></p>
+
+<h1 id="upsert-in-space:32f0145a202aaa4315a6d4f1c34a7c39">UPSERT in Space</h1>
+
+<blockquote>
+<p>Internally, insert and update operations are identical.</p>
+
+<p>&ndash; <cite><a href="https://docs.datastax.com/en/cql/3.1/cql/cql_reference/insert_r.html">INSERT - Cassandra Documentation</a> &amp; <a href="https://docs.datastax.com/en/cql/3.1/cql/cql_reference/update_r.html">UPDATE - Cassandra Documentation</a></cite></p>
+</blockquote>
+
+<p>That could become useful. Let&rsquo;s <code>INSERT</code> an entry and <code>UPDATE</code> the <code>data</code> value to be <code>null</code>:</p>
+
+<pre><code class="language-sql">cqlsh:fun&gt; CREATE TABLE test(
+    id int,
+    data text,
+    PRIMARY KEY (id));
+cqlsh:fun&gt; INSERT INTO test (id, data) VALUES (1, 'hello');
+cqlsh:fun&gt; UPDATE test SET data=null WHERE id=1;
+cqlsh:fun&gt; SELECT * FROM test;
+
+id | data
+----+------
+ 1 | null
+
+(1 rows)
+</code></pre>
+
+<p>Nothing unusual here. Let&rsquo;s try the same with an &ldquo;UPSERT&rdquo;, since it is identical.</p>
+
+<pre><code class="language-sql">cqlsh:fun&gt; UPDATE test SET data='hello world' WHERE id=2;
+cqlsh:fun&gt; SELECT * FROM test;
+
+id | data
+----+-------------
+ 1 |        null
+ 2 | hello world
+
+ (2 rows)
+cqlsh:fun&gt; UPDATE test SET data=null WHERE id=2;
+cqlsh:fun&gt; SELECT * FROM test;
+
+id | data
+----+------
+ 1 | null
+
+(1 rows)
+
+</code></pre>
+
+<p><img src="/img/wat/wat3.jpg" alt="" /></p>
+
+<p>* Posted WAT&rsquo;s have been tested with DSE 4.8.x and Apache Cassandra 2.1.x</p>
+
+
+      
+      
+    </article>
+    
+
+
+<script type="text/javascript">
+     
+    var disqus_shortname = '';
+
+     
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" rel="nofollow">comments powered by Disqus.</a></noscript>
+
+  </main>
+
+  <nav class="pagination-single">
+    
+    
+    <span class="next"><a href="http://datanerds.io/post/lack-initial-release/" rel="prev">LACK - Consensus via Cassandra</a>&rarr; </span>
+    
+  </nav>
+
+
+  
+  <footer role="contentinfo">
+    <div style="text-align:center;">
+      
+      Copyright © 2016 datanerds.io. <a href="http://creativecommons.org/licenses/by/4.0/">Some rights reserved</a>.
+    </div>
+  </footer>
+
+
+</div>
+
+<script src="/js/highlight.pack.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+
+<script>
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-75585044-1', 'auto');
+	ga('send', 'pageview');
+</script>
+
+</body>
+</html>
+
