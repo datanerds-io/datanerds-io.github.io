@@ -160,7 +160,7 @@ logger.info(&quot;Columns after re-prepare: {}&quot;, getColumnDefinitions(resul
 
 <p><img src="/img/wat/wat2.jpg" alt="" /></p>
 
-<p>Check whether really the new column got added (without using the prepared statement):</p>
+<p>A quick check whether the new column has been added or not, without using a prepared statement:</p>
 
 <pre><code class="language-java">result = session.execute(&quot;select * from test&quot;);
 logger.info(&quot;Columns after unprepared execute: {}&quot;, getColumnDefinitions(result));
