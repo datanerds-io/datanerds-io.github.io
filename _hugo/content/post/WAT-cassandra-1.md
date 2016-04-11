@@ -1,12 +1,12 @@
 +++
 date = "2016-04-10T19:02:35+02:00"
 draft = true
-title = "wat - Cassandra"
+title = "WAT - Cassandra"
 tags = ["cassandra", "WAT"]
 authors = ["Frank", "Lars"]
 +++
 
-When using Cassandra, you sometimes have these _WAT_ moments. If you don't know what we are talking about, just take a short [detour](https://www.destroyallsoftware.com/talks/wat).
+When using Cassandra\*, you sometimes have these _WAT_ moments. If you don't know what we are talking about, just take a short [detour](https://www.destroyallsoftware.com/talks/wat).
 
 Taking a step back and figuring out what things are built for is usually a good idea, so what was Cassandra envisioned for?
 
@@ -14,12 +14,12 @@ Taking a step back and figuring out what things are built for is usually a good 
 >
 > -- <cite>[Original Cassandra Paper](https://www.facebook.com/notes/facebook-engineering/cassandra-a-structured-storage-system-on-a-p2p-network/24413138919/)</cite>
 
-Cool, sounds like a a reasonable statement. When we started using Cassandra we had to develop an application with a dynamic data model. Amongst other features this made us giving Cassandra a shot. So here's how altering Cassandra tables leads to some funny WAT moments.
+Cool, sounds like a a reasonable statement. When we started using Cassandra we had to develop an application with a dynamic data model. Amongst other features this made us giving Cassandra a shot. So here is how altering Cassandra tables leads to some WAT's.
 
 # Setting up the environment
 First of all we need a keyspace to play around with:
 ```sql
-cqlsh> CREATE KEYSPACE fun WITH replication ={'class': 'SimpleStrategy' ,
+cqlsh> CREATE KEYSPACE fun WITH replication ={'class': 'SimpleStrategy',
     'replication_factor': 1 };
 cqlsh> USE fun;
 ```
@@ -40,8 +40,8 @@ with the same name and a different type has already been used in the past
 
 ![](/img/wat/wat1.jpg)
 
-# Prepared Statements
-Let's take a look at the java driver. Initially we connect to the cluster and create a simple test table with two columns. The 'id' column being the primary key and an arbitrary text column called 'initial_column'.
+# Be prepared! FOREVER!
+Let's take a look at the java driver. Initially we connect to the cluster and create a simple test table with two columns. The `id` column being the primary key and an arbitrary text column called `initial_column`.
 ```java
 Cluster cluster = Cluster.builder().addContactPoints("localhost").build();
 Session session = cluster.connect("fun");
@@ -54,7 +54,7 @@ Statement create = createTable("test")
 session.execute(create);
 ```
 
-When we prepare a 'SELECT *' statement on that table, bind and execute it the returned column definitions are as expected [id, initial_column].
+When we prepare a `SELECT *` statement on that table, bind and execute it the returned column definitions are as expected `[id, initial_column]`.
 ```java
 PreparedStatement prepared = session.prepare("select * from test");
 ResultSet result = session.execute(prepared.bind());
@@ -82,7 +82,7 @@ logger.info("Columns after re-prepare: {}", getColumnDefinitions(result));
 // Columns after re-prepare: [id, initial_column]
 ```
 
-![](/img/wat/wat1.jpg)
+![](/img/wat/wat2.jpg)
 
 Check whether really the new column got added (without using the prepared statement):
 ```java
@@ -91,7 +91,7 @@ logger.info("Columns after unprepared execute: {}", getColumnDefinitions(result)
 // Columns after unprepared execute: [id, initial_column, new_column]
 ```
 
-Yup, the column is there. So let's investigate whether re-connecting to the cluster solves this issue:
+Yup, the column is there. So let's investigate whether creating a new `Session` with the cluster helps:
 ```java
 session.close();
 session = cluster.connect("fun");
@@ -101,7 +101,7 @@ logger.info("Columns recreating session via re-connect on cluster: {}", getColum
 // Columns recreating session via re-connect on cluster: [id, initial_column]
 ```
 
-No. Apparently only re-instantiating the cluster does the job:
+Nope. Apparently only re-instantiating the cluster does the job:
 ```java
 session.close();
 cluster.close();
@@ -112,39 +112,54 @@ logger.info("Columns after recreating session via re-instantiating cluster: {}",
 // Columns after recreating session via re-instantiating cluster: [id, initial_column, new_column]
 ```
 
-# Update &ne; Insert
-Datastax' CQL documentation gives the impression that INSERT and UPDATE statements are identical. So let's create an entry via INSERT and update the non key value to be 'null':
+# UPSERT in Space
+
+> Internally, insert and update operations are identical.
+>
+> -- <cite>[INSERT - Cassandra Documentation](https://docs.datastax.com/en/cql/3.1/cql/cql_reference/insert_r.html) & [UPDATE - Cassandra Documentation](https://docs.datastax.com/en/cql/3.1/cql/cql_reference/update_r.html)</cite>
+
+That could become useful. Let's `INSERT` an entry and `UPDATE` the `data` value to be `null`:
+
 ```sql
-cqlsh:fun> CREATE TABLE IF NOT EXISTS test (
-         ...   id int,
-         ...   data text,
-         ...   PRIMARY KEY (id)
-         ...   );
+cqlsh:fun> CREATE TABLE test(
+    id int,
+    data text,
+    PRIMARY KEY (id));
 cqlsh:fun> INSERT INTO test (id, data) VALUES (1, 'hello');
 cqlsh:fun> UPDATE test SET data=null WHERE id=1;
 cqlsh:fun> SELECT * FROM test;
 
- id | data
+id | data
 ----+------
-  1 | null
+ 1 | null
+
 (1 rows)
 ```
 
-Nothing unusual here. Let's try the same via Cassandra's upsert mechanism:
+Nothing unusual here. Let's try the same with an "UPSERT", since it is identical.
 
 ```sql
-cqlsh:fun> UPDATE test SET data = 'hello world' WHERE id=2;
+cqlsh:fun> UPDATE test SET data='hello world' WHERE id=2;
 cqlsh:fun> SELECT * FROM test;
 
 id | data
 ----+-------------
+ 1 |        null
  2 | hello world
 
-cqlsh:fun> UPDATE test SET data = null WHERE id=2;
+ (2 rows)
+cqlsh:fun> UPDATE test SET data=null WHERE id=2;
 cqlsh:fun> SELECT * FROM test;
 
-(0 rows)
+id | data
+----+------
+ 1 | null
+
+(1 rows)
 
 ```
 
-![](/img/wat/wat1.jpg)
+![](/img/wat/wat3.jpg)
+
+
+\* Posted WAT's have been tested with DSE 4.8.x and Apache Cassandra 2.1.x
