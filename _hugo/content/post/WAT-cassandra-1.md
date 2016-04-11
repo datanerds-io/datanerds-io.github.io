@@ -1,6 +1,6 @@
 +++
-date = "2016-04-10T19:02:35+02:00"
-draft = true
+date = "2016-04-11T18:00:00+02:00"
+draft = false
 title = "WAT - Cassandra"
 tags = ["cassandra", "WAT"]
 authors = ["Frank", "Lars"]
@@ -41,7 +41,7 @@ with the same name and a different type has already been used in the past
 ![](/img/wat/wat1.jpg)
 
 # Be prepared! FOREVER!
-Let's take a look at the java driver. Initially we connect to the cluster and create a simple test table with two columns. The `id` column being the primary key and an arbitrary text column called `initial_column`.
+Let's take a look at the java driver. Initially we create a simple test table with two columns. The `id` column being the primary key and an arbitrary text column called `initial_column`.
 ```sql
 cqlsh:fun> CREATE TABLE test(
     id text,
@@ -108,6 +108,9 @@ result = session.execute(prepared.bind());
 logger.info("Columns after recreating session via re-instantiating cluster: {}", getColumnDefinitions(result));
 // Columns after recreating session via re-instantiating cluster: [id, initial_column, new_column]
 ```
+Since the prepared statements are identified by the hash of the query string, altering this statement e.g. through adding useless whitespaces gets you a fresh prepared statement.
+
+![](/img/wat/wat4.jpg)
 
 # UPSERT in Space
 
