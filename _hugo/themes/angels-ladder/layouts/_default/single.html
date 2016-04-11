@@ -36,11 +36,11 @@
   </main>
 
   <nav class="pagination-single">
-    {{ if .Next }}
-      <span class="previous">&larr; <a href="{{ .Next.Permalink }}" rel="prev">{{ .Next.Title }}</a></span>
-    {{ end }}
     {{ if .Prev }}
-      <span class="next"><a href="{{ .Prev.Permalink }}" rel="next">{{ .Prev.Title }}</a> &rarr;</span>
+    <span class="previous">&larr; <a href="{{ .Prev.Permalink }}" rel="next">{{ .Prev.Title }}</a></span>
+    {{ end }}
+    {{ if .Next }}
+    <span class="next"><a href="{{ .Next.Permalink }}" rel="prev">{{ .Next.Title }}</a>&rarr; </span>
     {{ end }}
   </nav>
 
