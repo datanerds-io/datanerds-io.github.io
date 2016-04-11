@@ -42,20 +42,17 @@ with the same name and a different type has already been used in the past
 
 # Be prepared! FOREVER!
 Let's take a look at the java driver. Initially we connect to the cluster and create a simple test table with two columns. The `id` column being the primary key and an arbitrary text column called `initial_column`.
-```java
-Cluster cluster = Cluster.builder().addContactPoints("localhost").build();
-Session session = cluster.connect("fun");
-
-Statement create = createTable("test")
-            .addPartitionKey("id", DataType.text())
-            .addColumn("initial_column", DataType.text())
-            .ifNotExists();
-
-session.execute(create);
+```sql
+cqlsh:fun> CREATE TABLE test(
+    id text,
+    initial_column text,
+    PRIMARY KEY (id));
 ```
 
 When we prepare a `SELECT *` statement on that table, bind and execute it the returned column definitions are as expected `[id, initial_column]`.
 ```java
+Cluster cluster = Cluster.builder().addContactPoints("localhost").build();
+Session session = cluster.connect("fun");
 PreparedStatement prepared = session.prepare("select * from test");
 ResultSet result = session.execute(prepared.bind());
 logger.info("Columns before alter table: {}", getColumnDefinitions(result));
@@ -63,8 +60,8 @@ logger.info("Columns before alter table: {}", getColumnDefinitions(result));
 
 ```
 Ok, now we figured we need an additional column. It's as easy as this:
-```java
-session.execute(alterTable("test").addColumn("new_column").type(DataType.text()));
+```sql
+cqlsh:fun> ALTER TABLE test ADD new_column text;
 ```
 
 Let's bind the prepared statement again and take a look at the returned columns:
