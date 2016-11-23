@@ -8,11 +8,11 @@ authors = ["Lars"]
 
 **TL;DR** Cassandra **_is not_** row level consistent!!!
 
-We published a [blog post]({{< relref "WAT-cassandra-1.md" >}}) about some surprising behaviors while using Apache Cassandra/ DataStax Enterprise some weeks back. Despite that we have a few more items on the list we would like to present this particular _WAT_ is worth sharing right away.
+We published a [blog post]({{< relref "WAT-cassandra-1.md" >}}) about some surprising behaviors while using Apache Cassandra/ DataStax Enterprise some weeks back. Recently we ran into more WAT issues and I believe this one is the most distressing.
 
 In a nutshell: **We discovered corrupt data** and it took us a while to understand what was happening and what the reasoning of the data corruption was. Let's dive into the problem:
 
-Imagine a table where a primary key is used to identify an entity. Each entity can have a boolean state to mark it as locked. Additionally, each entity has a revision counter.
+Imagine a table with a primary key to identify an entity. Each entity can have a boolean state to mark it as locked. Additionally, each entity has a revision counter.
 
 ```sql
 CREATE TABLE locks (
@@ -22,7 +22,7 @@ CREATE TABLE locks (
 );
 ```
 
-For an initial lock of the entity 'Tom' we execute an `INSERT`. Since one needs to make sure that no one else is obtaining the lock at the same time we make use of a Lightweight transaction (LWT) using `IF NOT EXISTS`. In order to prevent entities to be locked forever we automatically want to release the lock after some time. This can be achieved using a Time To Live `TTL`.
+For an initial lock of the entity 'Tom' we execute an `INSERT`. Since one needs to make sure that no one else is obtaining the lock at the same time we make use of a Lightweight transaction (LWT) using `IF NOT EXISTS`. In order to prevent deadlocked entities we release the lock after some time has passed automatically. Achieved is this through using a Time To Live `TTL`.
 
 ```sql
 INSERT INTO locks (id, lock, revision)
@@ -30,7 +30,7 @@ VALUES ('Tom', true, 1)
 IF NOT EXISTS USING TTL 20;
 ```
 
-Great, after we are done with other calculations for our entity Tom, we will release the lock via a simple UPDATE:
+Great! After finishing some other calculations for our entity Tom, we release the lock via a simple UPDATE:
 
 ```sql
 UPDATE locks SET lock=false, revision=2 WHERE id='Tom';
@@ -46,7 +46,7 @@ SELECT * FROM locks WHERE id='Tom';
  Tom | False |        2
 ```
 
-Instead, in some rare cases (~0.1%) the result looked like the following:
+Instead, in ~0.1% of the rows the result looked like the following:
 
 ```sql
 SELECT * FROM locks WHERE id='Tom';
@@ -57,7 +57,7 @@ SELECT * FROM locks WHERE id='Tom';
 ```
 Given the used queries, the row should not be in a state where lock is null and a revision is set at the same time.
 
-After deeper investigations of audit logs &amp; SSTables it turns out that we did run into a timestamp tie, which means that the cluster node sees a stream of changes where two or multiple changes for an entity happen at the exact same time. So what is Cassandra's resolution strategy for multiple updates happening at the same time? *"[...] if there are two updates, the one with the lexically larger value is selected. [...]"* [1]
+After deeper investigations of audit logs & SSTables it turns out that we did run into a timestamp tie, which means that the cluster node sees a stream of changes where two or multiple changes for an entity happen at the exact same time. Interesting, so what is the resolution strategy for multiple updates at the same time? *"[...] if there are two updates, the one with the lexically larger value is selected. [...]"* [1]
 
 **lexical larger value? LEXICAL LARGER VALUE??**
 
