@@ -1,7 +1,7 @@
 +++
 date = "2016-11-23T14:03:48-07:00"
 draft = true
-title = "WAT - Cassandra: Row level consistency"
+title = "WAT - Cassandra: Row level consistency #$@&%*!"
 tags = ["cassandra", "WAT", "inconsistency", "timestamp tie"]
 authors = ["Lars"]
 +++
@@ -57,16 +57,16 @@ SELECT * FROM locks WHERE id='Tom';
 ```
 Given the used queries, the row should not be in a state where lock is null and a revision is set at the same time.
 
-After deeper investigations of audit logs &amp; SSTables it turns out that we did run into a timestamp tie, which means that the cluster node sees a stream of changes where two or multiple changes happen at the exact same time. So what is Cassandra's resolution strategy for multiple updates happening at the same time? *"[...] if there are two updates, the one with the lexically larger value is selected. [...] [1]"*
+After deeper investigations of audit logs &amp; SSTables it turns out that we did run into a timestamp tie, which means that the cluster node sees a stream of changes where two or multiple changes for an entity happen at the exact same time. So what is Cassandra's resolution strategy for multiple updates happening at the same time? *"[...] if there are two updates, the one with the lexically larger value is selected. [...]"* [1]
 
 **lexical order? LEXICAL ORDER??**
 
-So what happens to our statements? When the acquire and release of the lock happen at the same time Cassandra will compare on **cell level** which one is greater and choose this cell for the final state. For the `lock` column this means: `true > false` so it will take that portion of the `INSERT`. For `revision` the second query will define the state since `2 > 1`. Since the first query has a `TTL` it's content will be removed after the defined 20 seconds.
+So what happens to our statements? When the acquire and release of the lock happen at the same exact time, Cassandra will compare on **_cell level_** which one is greater and will choose this portion of the query for the final state. For the `lock` column this means: `true > false` so it will take that portion of the `INSERT`. For `revision` the `UPDATE` query will win since `2 > 1`. The first query has a `TTL` so its content will be removed after 20 seconds...
 
 ![](/img/wat/wat7.jpg)
 
 ### Workaround
-The latter `UPDATE` will also be executed using LWT. When a tie happens using LWT it will return with `applied = false`. In these cases we just retry the release query...
+The latter release `UPDATE` will also be executed using LWT. When a tie happens using LWT it will return with `applied = false`. In these cases we just retry the release query...
 
 ![](/img/mindblown.gif)
 
@@ -74,7 +74,5 @@ The latter `UPDATE` will also be executed using LWT. When a tie happens using LW
 
 1. The server should log timestamp ties. We were just lucky to find the glitch in the data: https://issues.apache.org/jira/browse/CASSANDRA-12587
 2. Since the origin of the competing query is the same process, a sequence number should be sufficient to define order: https://issues.apache.org/jira/browse/CASSANDRA-6123
-
-
 
 [1] - http://cassandra.apache.org/doc/latest/faq/index.html#what-happens-if-two-updates-are-made-with-the-same-timestamp
