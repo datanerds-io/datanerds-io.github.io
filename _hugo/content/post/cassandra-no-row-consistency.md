@@ -59,9 +59,9 @@ Given the used queries, the row should not be in a state where lock is null and 
 
 After deeper investigations of audit logs &amp; SSTables it turns out that we did run into a timestamp tie, which means that the cluster node sees a stream of changes where two or multiple changes for an entity happen at the exact same time. So what is Cassandra's resolution strategy for multiple updates happening at the same time? *"[...] if there are two updates, the one with the lexically larger value is selected. [...]"* [1]
 
-**lexical order? LEXICAL ORDER??**
+**lexical larger value? LEXICAL LARGER VALUE??**
 
-So what happens to our statements? When the acquire and release of the lock happen at the same exact time, Cassandra will compare on **_cell level_** which one is greater and will choose this portion of the query for the final state. For the `lock` column this means: `true > false` so it will take that portion of the `INSERT`. For `revision` the `UPDATE` query will win since `2 > 1`. The first query has a `TTL` so its content will be removed after 20 seconds...
+So what happens to our statements? When the acquire and release of the lock happen at the same exact time, Cassandra will compare on **_cell level (CELL LEVEL!!!)_** which one is greater and will choose this portion of the query for the final state. For the lock column this means: `true > false` so it will take that portion of the `INSERT`. For the revision column the `UPDATE` query will win since `2 > 1`. Due to the usage of `TTL` its content will be removed after 20 seconds... hence the column for lock will become `null`, #$@&%!!! There is no row level consistency in Cassandra, #$@&%!!!
 
 ![](/img/wat/wat7.jpg)
 
