@@ -3,8 +3,12 @@
   
   <url>
     <loc>http://datanerds.io/</loc>
-    <lastmod>2016-04-11T18:00:00+02:00</lastmod>
-    <priority>0</priority>
+    <lastmod>2016-11-23T19:45:48-07:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>http://datanerds.io/post/cassandra-no-row-consistency/</loc>
+    <lastmod>2016-11-23T19:45:48-07:00</lastmod>
   </url>
   
   <url>

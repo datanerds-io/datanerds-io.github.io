@@ -1,6 +1,6 @@
 +++
-date = "2016-11-23T14:03:48-07:00"
-draft = true
+date = "2016-11-23T19:45:48-07:00"
+draft = false
 title = "WAT - Cassandra: Row level consistency #$@&%*!"
 tags = ["cassandra", "WAT", "inconsistency", "timestamp tie"]
 authors = ["Lars"]
@@ -8,7 +8,7 @@ authors = ["Lars"]
 
 **TL;DR** Cassandra **_is not_** row level consistent!!!
 
-We published a [blog post]({{< relref "WAT-cassandra-1.md" >}}) about some surprising and unexpected behaviors while using Apache Cassandra/DataStax Enterprise some weeks back. Recently, we encountered even more WAT moments and I believe this one is the most alarming.
+We published a [blog post]({{< relref "WAT-cassandra-1.md" >}}) about some surprising and unexpected behaviors while using Apache Cassandra/DataStax Enterprise some weeks back. Recently, we encountered even more WAT moments and I believe this one is the most distressing.
 
 In a nutshell: **We discovered corrupted data** and it took us a while to understand what was happening and why that data was corrupt. Let's dive into the problem:
 
@@ -46,7 +46,7 @@ SELECT * FROM locks WHERE id='Tom';
  Tom | False |        2
 ```
 
-To our suprise this was not always the case. In ~0.1% of the rows the result looked like this:
+To our surprise this was not always the case. In ~0.1% of the rows the result looked like this:
 
 ```sql
 SELECT * FROM locks WHERE id='Tom';
@@ -57,7 +57,7 @@ SELECT * FROM locks WHERE id='Tom';
 ```
 Given the queries we are using, the row should not be in a state where lock is null and a revision is set at the same time.
 
-After deeper investigations of audit logs and a deep dive into the SSTables it turned out that we did run into a timestamp tie. The cluster node our client is talking to sees a stream of changes with two or more changes happening to the same entry in the lock table at the exact same time. Obviously the calculation we are doing in between acquiring the lock and releasing it is not taking enough time (###RESOLUTION). Interesting, so what is the resolution strategy for multiple updates at the same time? *"[...] if there are two updates, the one with the lexically larger value is selected. [...]"* [1]
+After deeper investigations of audit logs and a deep dive into the SSTables it turned out that we did run into a timestamp tie. The cluster node our client is talking to sees a stream of changes with two or more changes happening to the same entry in the lock table at the exact same time. Obviously the calculation we are doing in between acquiring the lock and releasing it is not taking enough time (microseconds). Interesting, so what is the resolution strategy for multiple updates at the same time? *"[...] if there are two updates, the one with the lexically larger value is selected. [...]"* [1]
 
 **lexical larger value? LEXICAL LARGER VALUE??**
 

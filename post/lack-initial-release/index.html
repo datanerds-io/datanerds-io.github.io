@@ -85,7 +85,7 @@
 
 <p>In late 2014 DataStax published a <a href="http://www.datastax.com/dev/blog/consensus-on-cassandra">blog post</a> in which they explain how Cassandra can be leveraged in order to reach consensus in a distributed environment. A detailed explanation can be found in mentioned article. In essence, a distributed lock or mutex mechanism to enforce that only one resource in a distributed and concurrent environment can be changed at the same time. Inspired by said article <em>LACK [luhk]</em> was implemented. It is a very thin Java API on top of a few Cassandra queries. It is not meant as a consensus library such as libraft or atomix. We just needed something implemented fast and on top of Cassandra.</p>
 
-<h1 id="creating-a-keyspace:4c3eebe67ae7f1eaa363e959b2cef1d7">Creating a keyspace</h1>
+<h1 id="creating-a-keyspace">Creating a keyspace</h1>
 
 <p>In order to run LACK you have to point it to a keyspace in which it can create necessary table.</p>
 
@@ -93,7 +93,7 @@
     WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 };
 </code></pre>
 
-<h1 id="locking:4c3eebe67ae7f1eaa363e959b2cef1d7">Locking</h1>
+<h1 id="locking">Locking</h1>
 
 <p>You can import LACK from Maven Central Repository:</p>
 

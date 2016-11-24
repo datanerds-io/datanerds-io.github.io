@@ -91,7 +91,7 @@
 
 <p>Cool, sounds like a a reasonable statement. When we started using Cassandra we had to develop an application with a dynamic data model. Amongst other features this made us giving Cassandra a shot. So here is how altering Cassandra tables leads to some WAT&rsquo;s.</p>
 
-<h1 id="setting-up-the-environment:32f0145a202aaa4315a6d4f1c34a7c39">Setting up the environment</h1>
+<h1 id="setting-up-the-environment">Setting up the environment</h1>
 
 <p>First of all we need a keyspace to play around with:</p>
 
@@ -100,7 +100,7 @@
 cqlsh&gt; USE fun;
 </code></pre>
 
-<h1 id="collection-column-re-use:32f0145a202aaa4315a6d4f1c34a7c39">Collection Column re-use</h1>
+<h1 id="collection-column-re-use">Collection Column re-use</h1>
 
 <p>Let&rsquo;s now have a simple table with an identifier and a collection column</p>
 
@@ -117,7 +117,7 @@ with the same name and a different type has already been used in the past
 
 <p><img src="/img/wat/wat1.jpg" alt="" /></p>
 
-<h1 id="be-prepared-forever:32f0145a202aaa4315a6d4f1c34a7c39">Be prepared! FOREVER!</h1>
+<h1 id="be-prepared-forever">Be prepared! FOREVER!</h1>
 
 <p>Let&rsquo;s take a look at the java driver. Initially we create a simple test table with two columns. The <code>id</code> column being the primary key and an arbitrary text column called <code>initial_column</code>.</p>
 
@@ -192,7 +192,7 @@ logger.info(&quot;Columns after recreating session via re-instantiating cluster:
 
 <p><img src="/img/wat/wat4.jpg" alt="" /></p>
 
-<h1 id="upsert-in-space:32f0145a202aaa4315a6d4f1c34a7c39">UPSERT in Space</h1>
+<h1 id="upsert-in-space">UPSERT in Space</h1>
 
 <blockquote>
 <p>Internally, insert and update operations are identical.</p>
@@ -266,6 +266,8 @@ id | data
   </main>
 
   <nav class="pagination-single">
+    
+    <span class="previous">&larr; <a href="http://datanerds.io/post/cassandra-no-row-consistency/" rel="next">WAT - Cassandra: Row level consistency #$@&amp;%*!</a></span>
     
     
     <span class="next"><a href="http://datanerds.io/post/lack-initial-release/" rel="prev">LACK - Consensus via Cassandra</a>&rarr; </span>

@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes" ?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Lack on datanerds.io</title>
-    <link>http://datanerds.io/tags/lack/</link>
-    <description>Recent content in Lack on datanerds.io</description>
+    <title>datanerds.io</title>
+    <link>http://datanerds.io/tags/lack/index.xml</link>
+    <description>Recent content on datanerds.io</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sat, 26 Mar 2016 18:41:00 +0100</lastBuildDate>
+    <copyright>Copyright © 2016 datanerds.io. &lt;a href=&#34;http://creativecommons.org/licenses/by/4.0/&#34;&gt;Some rights reserved&lt;/a&gt;.</copyright>
     <atom:link href="http://datanerds.io/tags/lack/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
@@ -19,7 +19,7 @@
 
 &lt;p&gt;In late 2014 DataStax published a &lt;a href=&#34;http://www.datastax.com/dev/blog/consensus-on-cassandra&#34;&gt;blog post&lt;/a&gt; in which they explain how Cassandra can be leveraged in order to reach consensus in a distributed environment. A detailed explanation can be found in mentioned article. In essence, a distributed lock or mutex mechanism to enforce that only one resource in a distributed and concurrent environment can be changed at the same time. Inspired by said article &lt;em&gt;LACK [luhk]&lt;/em&gt; was implemented. It is a very thin Java API on top of a few Cassandra queries. It is not meant as a consensus library such as libraft or atomix. We just needed something implemented fast and on top of Cassandra.&lt;/p&gt;
 
-&lt;h1 id=&#34;creating-a-keyspace:4c3eebe67ae7f1eaa363e959b2cef1d7&#34;&gt;Creating a keyspace&lt;/h1&gt;
+&lt;h1 id=&#34;creating-a-keyspace&#34;&gt;Creating a keyspace&lt;/h1&gt;
 
 &lt;p&gt;In order to run LACK you have to point it to a keyspace in which it can create necessary table.&lt;/p&gt;
 
@@ -27,7 +27,7 @@
     WITH REPLICATION = { &#39;class&#39; : &#39;SimpleStrategy&#39;, &#39;replication_factor&#39; : 1 };
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;h1 id=&#34;locking:4c3eebe67ae7f1eaa363e959b2cef1d7&#34;&gt;Locking&lt;/h1&gt;
+&lt;h1 id=&#34;locking&#34;&gt;Locking&lt;/h1&gt;
 
 &lt;p&gt;You can import LACK from Maven Central Repository:&lt;/p&gt;
 
