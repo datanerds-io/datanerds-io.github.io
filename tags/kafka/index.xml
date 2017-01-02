@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes" ?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>datanerds.io</title>
+    <title>Kafka on datanerds.io</title>
     <link>http://datanerds.io/tags/kafka/index.xml</link>
-    <description>Recent content on datanerds.io</description>
+    <description>Recent content in Kafka on datanerds.io</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <copyright>Copyright © 2016 datanerds.io. &lt;a href=&#34;http://creativecommons.org/licenses/by/4.0/&#34;&gt;Some rights reserved&lt;/a&gt;.</copyright>
+    <copyright>Copyright © 2017 datanerds.io. &lt;a href=&#34;http://creativecommons.org/licenses/by/4.0/&#34;&gt;Some rights reserved&lt;/a&gt;.</copyright>
     <atom:link href="http://datanerds.io/tags/kafka/index.xml" rel="self" type="application/rss+xml" />
     
     <item>

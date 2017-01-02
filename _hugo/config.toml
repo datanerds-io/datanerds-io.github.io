@@ -6,7 +6,7 @@ title = "datanerds.io"
   logo = "img/logo.png"
   github = "https://github.com/datanerds-io"
   showsRSS = true
-  copyright = "Copyright © 2016 datanerds.io. <a href=\"http://creativecommons.org/licenses/by/4.0/\">Some rights reserved</a>."
+  copyright = "Copyright © 2017 datanerds.io. <a href=\"http://creativecommons.org/licenses/by/4.0/\">Some rights reserved</a>."
   analytics = "UA-75585044-1"
 
 [taxonomies]
