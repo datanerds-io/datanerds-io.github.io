@@ -1,0 +1,31 @@
+{{ partial "header.html" . }}
+
+  <!-- Main Section Layout
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <main id="list" role="main">
+    <div class="article-header light-gray">
+        <h1>{{ .Title }}</h1>
+        {{ .Params.about }}
+        <div class="social">
+            <ul>
+                <li>{{ with .Params.github }}<a href="{{ . }}" target="_blank">GitHub</a>{{ end }}</li>
+                <li>{{ with .Params.twitter }}<a href="{{ . }}" target="_blank">Twitter</a>{{ end }}</li>
+                <li>{{ with .Params.linkedin }}<a href="{{ . }}" target="_blank">LinkedIn</a>{{ end }}</li>
+
+            </ul>
+        </div>
+    </div>
+    {{ range .Data.Pages }}
+    <div class="summary">
+      <h2><a href="{{ .Permalink }}">{{ .Title }} {{ if .Draft }}:: DRAFT{{end}}</a></h2>
+      <div class="meta">
+        {{ .Date.Format "Jan 2, 2006" }} &nbsp;
+        {{ range .Params.tags }}
+          #<a href="/tags/{{ . | urlize }}">{{ . }}</a>&nbsp;
+        {{ end }}
+      </div>
+    </div>
+    {{ end }}
+  </main>
+
+{{ partial "footer.html" . }}

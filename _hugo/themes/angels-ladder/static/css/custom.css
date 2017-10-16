@@ -5,3 +5,32 @@
 .code {
     font-family: "Source Code Pro", "Courier New", monospace;
 }
+
+ {
+  display: inline-block;
+  font-size: 10px;
+  padding: 0 10px;
+}
+
+
+main#list .social {
+  text-align: left;
+}
+main#list .social ul {
+  font-size: 0;
+  margin: 0;
+}
+main#list .social li {
+  display: inline-block;
+  font-size: 12px;
+  padding: 0 10px;
+}
+main#list .social li:first-child {
+  padding-left: 0;
+}
+main#list .social li + li {
+  border-left: 1px solid #ccc;
+}
+main#list .social li:last-child {
+  padding-right: 0;
+}
