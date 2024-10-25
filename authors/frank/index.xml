@@ -2,17 +2,17 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Frank on datanerds.io</title>
-    <link>http://datanerds.io/authors/frank/</link>
+    <link>http://datanerds-io.github.io/authors/frank/</link>
     <description>Recent content in Frank on datanerds.io</description>
     <generator>Hugo</generator>
     <language>en-us</language>
     <lastBuildDate>Mon, 11 Apr 2016 18:00:00 +0200</lastBuildDate>
-    <atom:link href="http://datanerds.io/authors/frank/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="http://datanerds-io.github.io/authors/frank/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>WAT - Cassandra</title>
-      <link>http://datanerds.io/post/wat-cassandra-1/</link>
+      <link>http://datanerds-io.github.io/post/wat-cassandra-1/</link>
       <pubDate>Mon, 11 Apr 2016 18:00:00 +0200</pubDate>
-      <guid>http://datanerds.io/post/wat-cassandra-1/</guid>
+      <guid>http://datanerds-io.github.io/post/wat-cassandra-1/</guid>
       <description>&lt;p&gt;When using Cassandra*, you sometimes have these &lt;em&gt;WAT&lt;/em&gt; moments. If you don&amp;rsquo;t know what we are talking about, just take a short &lt;a href=&#34;https://www.destroyallsoftware.com/talks/wat&#34;&gt;detour&lt;/a&gt;.&lt;/p&gt;&#xA;&lt;p&gt;Taking a step back and figuring out what things are built for is usually a good idea, so what was Cassandra envisioned for?&lt;/p&gt;&#xA;&lt;blockquote&gt;&#xA;&lt;p&gt;Cassandra does not support a full relational data model; instead, it provides clients with a simple data model that supports dynamic control over data layout and format.&lt;/p&gt;</description>
     </item>
   </channel>

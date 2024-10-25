@@ -2,31 +2,31 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Java on datanerds.io</title>
-    <link>http://datanerds.io/tags/java/</link>
+    <link>http://datanerds-io.github.io/tags/java/</link>
     <description>Recent content in Java on datanerds.io</description>
     <generator>Hugo</generator>
     <language>en-us</language>
     <lastBuildDate>Sat, 26 Mar 2016 18:41:00 +0100</lastBuildDate>
-    <atom:link href="http://datanerds.io/tags/java/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="http://datanerds-io.github.io/tags/java/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>LACK - Consensus via Cassandra</title>
-      <link>http://datanerds.io/post/lack-initial-release/</link>
+      <link>http://datanerds-io.github.io/post/lack-initial-release/</link>
       <pubDate>Sat, 26 Mar 2016 18:41:00 +0100</pubDate>
-      <guid>http://datanerds.io/post/lack-initial-release/</guid>
+      <guid>http://datanerds-io.github.io/post/lack-initial-release/</guid>
       <description>&lt;p&gt;In late 2014 DataStax published a &lt;a href=&#34;http://www.datastax.com/dev/blog/consensus-on-cassandra&#34;&gt;blog post&lt;/a&gt; in which they explain how Cassandra can be leveraged in order to reach consensus in a distributed environment. A detailed explanation can be found in mentioned article. In essence, a distributed lock or mutex mechanism to enforce that only one resource in a distributed and concurrent environment can be changed at the same time. Inspired by said article &lt;em&gt;LACK [luhk]&lt;/em&gt; was implemented. It is a very thin Java API on top of a few Cassandra queries. It is not meant as a consensus library such as libraft or atomix. We just needed something implemented fast and on top of Cassandra.&lt;/p&gt;</description>
     </item>
     <item>
       <title>Apache Kafka eBook</title>
-      <link>http://datanerds.io/post/kafka101-ebook/</link>
+      <link>http://datanerds-io.github.io/post/kafka101-ebook/</link>
       <pubDate>Tue, 24 Nov 2015 16:13:29 +0200</pubDate>
-      <guid>http://datanerds.io/post/kafka101-ebook/</guid>
+      <guid>http://datanerds-io.github.io/post/kafka101-ebook/</guid>
       <description>&lt;p&gt;During 2015 Frank, Tobias and I published multiple articles in the German &amp;ldquo;Java Magazin&amp;rdquo; which cover Apache Kafka related topics such as basic fundamentals, the use of the &lt;a href=&#34;http://docs.confluent.io/2.0.0/schema-registry/docs/index.html&#34;&gt;Schema Registry&lt;/a&gt; and the &lt;a href=&#34;http://docs.confluent.io/2.0.0/kafka-rest/docs/index.html&#34;&gt;REST Proxy&lt;/a&gt;. S&amp;amp;S Media decided to combine those articles in a lightweight eBook which is available in their &lt;a href=&#34;https://entwickler.de/press/apache-kafka-191983.html&#34;&gt;online store&lt;/a&gt; as well as in the &lt;a href=&#34;http://www.amazon.de/dp/B018ER1AXQ&#34;&gt;Kindle Shop&lt;/a&gt;.&lt;/p&gt;&#xA;&lt;p&gt;The sample source code can (as always) be found on GitHub: &lt;a href=&#34;https://github.com/kafka101/java-news-feed&#34;&gt;Basic Messaging&lt;/a&gt;, &lt;a href=&#34;https://github.com/kafka101/clickstream-schema&#34;&gt;Schema Registry&lt;/a&gt; &amp;amp; &lt;a href=&#34;https://github.com/kafka101/clickstream-rest-proxy&#34;&gt;REST Proxy&lt;/a&gt;.&lt;/p&gt;</description>
     </item>
     <item>
       <title>Kafka 101 at JAXenter.de</title>
-      <link>http://datanerds.io/post/kafka101-jaxenter/</link>
+      <link>http://datanerds-io.github.io/post/kafka101-jaxenter/</link>
       <pubDate>Wed, 28 Oct 2015 19:21:00 +0200</pubDate>
-      <guid>http://datanerds.io/post/kafka101-jaxenter/</guid>
+      <guid>http://datanerds-io.github.io/post/kafka101-jaxenter/</guid>
       <description>&lt;p&gt;In October an introduction to Apache Kafka called &amp;ldquo;Kafka 101&amp;rdquo; written by Frank and me got published in issue 08/2015 of the German &amp;ldquo;Java Magazin&amp;rdquo;. The article itself introduces the basic concepts and methodologies used in Kafka, plus simple examples to &lt;em&gt;publish&lt;/em&gt; &amp;amp; &lt;em&gt;consume&lt;/em&gt; messages.&lt;/p&gt;&#xA;&lt;p&gt;Mentioned article also got published online: &lt;a href=&#34;https://jaxenter.de/kafka-101-28692&#34;&gt;JAXenter.de&lt;/a&gt;. The example source code can be found on &lt;a href=&#34;https://github.com/kafka101/java-news-feed&#34;&gt;GitHub&lt;/a&gt;.&lt;/p&gt;</description>
     </item>
   </channel>

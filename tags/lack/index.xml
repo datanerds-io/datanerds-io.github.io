@@ -2,17 +2,17 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>LACK on datanerds.io</title>
-    <link>http://datanerds.io/tags/lack/</link>
+    <link>http://datanerds-io.github.io/tags/lack/</link>
     <description>Recent content in LACK on datanerds.io</description>
     <generator>Hugo</generator>
     <language>en-us</language>
     <lastBuildDate>Sat, 26 Mar 2016 18:41:00 +0100</lastBuildDate>
-    <atom:link href="http://datanerds.io/tags/lack/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="http://datanerds-io.github.io/tags/lack/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>LACK - Consensus via Cassandra</title>
-      <link>http://datanerds.io/post/lack-initial-release/</link>
+      <link>http://datanerds-io.github.io/post/lack-initial-release/</link>
       <pubDate>Sat, 26 Mar 2016 18:41:00 +0100</pubDate>
-      <guid>http://datanerds.io/post/lack-initial-release/</guid>
+      <guid>http://datanerds-io.github.io/post/lack-initial-release/</guid>
       <description>&lt;p&gt;In late 2014 DataStax published a &lt;a href=&#34;http://www.datastax.com/dev/blog/consensus-on-cassandra&#34;&gt;blog post&lt;/a&gt; in which they explain how Cassandra can be leveraged in order to reach consensus in a distributed environment. A detailed explanation can be found in mentioned article. In essence, a distributed lock or mutex mechanism to enforce that only one resource in a distributed and concurrent environment can be changed at the same time. Inspired by said article &lt;em&gt;LACK [luhk]&lt;/em&gt; was implemented. It is a very thin Java API on top of a few Cassandra queries. It is not meant as a consensus library such as libraft or atomix. We just needed something implemented fast and on top of Cassandra.&lt;/p&gt;</description>
     </item>
   </channel>
