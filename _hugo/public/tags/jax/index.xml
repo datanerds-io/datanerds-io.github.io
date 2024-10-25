@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>JAX on datanerds.io</title>
+    <link>http://localhost:1313/tags/jax/</link>
+    <description>Recent content in JAX on datanerds.io</description>
+    <generator>Hugo</generator>
+    <language>en-us</language>
+    <lastBuildDate>Wed, 28 Oct 2015 19:21:00 +0200</lastBuildDate>
+    <atom:link href="http://localhost:1313/tags/jax/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Kafka 101 at JAXenter.de</title>
+      <link>http://localhost:1313/post/kafka101-jaxenter/</link>
+      <pubDate>Wed, 28 Oct 2015 19:21:00 +0200</pubDate>
+      <guid>http://localhost:1313/post/kafka101-jaxenter/</guid>
+      <description>&lt;p&gt;In October an introduction to Apache Kafka called &amp;ldquo;Kafka 101&amp;rdquo; written by Frank and me got published in issue 08/2015 of the German &amp;ldquo;Java Magazin&amp;rdquo;. The article itself introduces the basic concepts and methodologies used in Kafka, plus simple examples to &lt;em&gt;publish&lt;/em&gt; &amp;amp; &lt;em&gt;consume&lt;/em&gt; messages.&lt;/p&gt;&#xA;&lt;p&gt;Mentioned article also got published online: &lt;a href=&#34;https://jaxenter.de/kafka-101-28692&#34;&gt;JAXenter.de&lt;/a&gt;. The example source code can be found on &lt;a href=&#34;https://github.com/kafka101/java-news-feed&#34;&gt;GitHub&lt;/a&gt;.&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>

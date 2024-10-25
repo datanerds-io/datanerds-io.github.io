@@ -5,7 +5,7 @@
 –––––––––––––––––––––––––––––––––––––––––––––––––– -->
 <main id="index" role="main">
   <div class="article-header light-gray"><h1 class="code">cat /dev/urandom</h1></div>
-  {{ $paginator := .Paginate (where .Data.Pages "Type" "post") }}
+  {{ $paginator := .Paginate (where site.RegularPages "Type" "post") }}
   {{ range $paginator.Pages }}
   <div class="summary">
     <h2><a href="{{ .Permalink }}">{{ .Title }} {{ if .Draft }}:: DRAFT{{end}}</a></h2>

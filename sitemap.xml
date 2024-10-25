@@ -1,121 +1,72 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  
-  <url>
-    <loc>http://datanerds.io/post/cassandra-no-row-consistency/</loc>
-    <lastmod>2016-11-23T19:45:48-07:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>http://datanerds.io/post/WAT-cassandra-1/</loc>
-    <lastmod>2016-04-11T18:00:00+02:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>http://datanerds.io/post/lack-initial-release/</loc>
-    <lastmod>2016-03-26T18:41:00+01:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>http://datanerds.io/post/kafka101-ebook/</loc>
-    <lastmod>2015-11-24T16:13:29+02:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>http://datanerds.io/post/kafka101-jaxenter/</loc>
-    <lastmod>2015-10-28T19:21:00+02:00</lastmod>
-  </url>
-  
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+  xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
     <loc>http://datanerds.io/authors/</loc>
-    <priority>0</priority>
-  </url>
-  
-  <url>
+    <lastmod>2016-11-23T19:45:48-07:00</lastmod>
+  </url><url>
     <loc>http://datanerds.io/tags/cassandra/</loc>
     <lastmod>2016-11-23T19:45:48-07:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>http://datanerds.io/tags/consensus/</loc>
-    <lastmod>2016-03-26T18:41:00+01:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>http://datanerds.io/authors/frank/</loc>
-    <lastmod>2016-04-11T18:00:00+02:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>http://datanerds.io/tags/inconsistency/</loc>
-    <lastmod>2016-11-23T19:45:48-07:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>http://datanerds.io/tags/java/</loc>
-    <lastmod>2016-03-26T18:41:00+01:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>http://datanerds.io/tags/jax/</loc>
-    <lastmod>2015-10-28T19:21:00+02:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>http://datanerds.io/tags/kafka/</loc>
-    <lastmod>2015-11-24T16:13:29+02:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>http://datanerds.io/tags/lack/</loc>
-    <lastmod>2016-03-26T18:41:00+01:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>http://datanerds.io/authors/lars/</loc>
-    <lastmod>2016-11-23T19:45:48-07:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>http://datanerds.io/tags/lock/</loc>
-    <lastmod>2016-03-26T18:41:00+01:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>http://datanerds.io/post/</loc>
-    <lastmod>2016-11-23T19:45:48-07:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>http://datanerds.io/tags/</loc>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>http://datanerds.io/tags/timestamp-tie/</loc>
-    <lastmod>2016-11-23T19:45:48-07:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>http://datanerds.io/tags/wat/</loc>
-    <lastmod>2016-11-23T19:45:48-07:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>http://datanerds.io/</loc>
     <lastmod>2016-11-23T19:45:48-07:00</lastmod>
-    <priority>0</priority>
+  </url><url>
+    <loc>http://datanerds.io/tags/inconsistency/</loc>
+    <lastmod>2016-11-23T19:45:48-07:00</lastmod>
+  </url><url>
+    <loc>http://datanerds.io/authors/lars/</loc>
+    <lastmod>2016-11-23T19:45:48-07:00</lastmod>
+  </url><url>
+    <loc>http://datanerds.io/post/</loc>
+    <lastmod>2016-11-23T19:45:48-07:00</lastmod>
+  </url><url>
+    <loc>http://datanerds.io/tags/</loc>
+    <lastmod>2016-11-23T19:45:48-07:00</lastmod>
+  </url><url>
+    <loc>http://datanerds.io/tags/timestamp-tie/</loc>
+    <lastmod>2016-11-23T19:45:48-07:00</lastmod>
+  </url><url>
+    <loc>http://datanerds.io/tags/wat/</loc>
+    <lastmod>2016-11-23T19:45:48-07:00</lastmod>
+  </url><url>
+    <loc>http://datanerds.io/post/cassandra-no-row-consistency/</loc>
+    <lastmod>2016-11-23T19:45:48-07:00</lastmod>
+  </url><url>
+    <loc>http://datanerds.io/authors/frank/</loc>
+    <lastmod>2016-04-11T18:00:00+02:00</lastmod>
+  </url><url>
+    <loc>http://datanerds.io/post/wat-cassandra-1/</loc>
+    <lastmod>2016-04-11T18:00:00+02:00</lastmod>
+  </url><url>
+    <loc>http://datanerds.io/tags/consensus/</loc>
+    <lastmod>2016-03-26T18:41:00+01:00</lastmod>
+  </url><url>
+    <loc>http://datanerds.io/tags/java/</loc>
+    <lastmod>2016-03-26T18:41:00+01:00</lastmod>
+  </url><url>
+    <loc>http://datanerds.io/tags/lack/</loc>
+    <lastmod>2016-03-26T18:41:00+01:00</lastmod>
+  </url><url>
+    <loc>http://datanerds.io/post/lack-initial-release/</loc>
+    <lastmod>2016-03-26T18:41:00+01:00</lastmod>
+  </url><url>
+    <loc>http://datanerds.io/tags/lock/</loc>
+    <lastmod>2016-03-26T18:41:00+01:00</lastmod>
+  </url><url>
+    <loc>http://datanerds.io/post/kafka101-ebook/</loc>
+    <lastmod>2015-11-24T16:13:29+02:00</lastmod>
+  </url><url>
+    <loc>http://datanerds.io/tags/kafka/</loc>
+    <lastmod>2015-11-24T16:13:29+02:00</lastmod>
+  </url><url>
+    <loc>http://datanerds.io/tags/jax/</loc>
+    <lastmod>2015-10-28T19:21:00+02:00</lastmod>
+  </url><url>
+    <loc>http://datanerds.io/post/kafka101-jaxenter/</loc>
+    <lastmod>2015-10-28T19:21:00+02:00</lastmod>
+  </url><url>
+    <loc>http://datanerds.io/categories/</loc>
+  </url><url>
+    <loc>http://datanerds.io/series/</loc>
   </url>
-  
 </urlset>

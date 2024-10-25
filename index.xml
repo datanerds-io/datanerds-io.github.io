@@ -1,344 +1,47 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>datanerds.io</title>
-    <link>http://datanerds.io/index.xml</link>
+    <link>http://datanerds.io/</link>
     <description>Recent content on datanerds.io</description>
-    <generator>Hugo -- gohugo.io</generator>
+    <generator>Hugo</generator>
     <language>en-us</language>
-    <copyright>Copyright © 2016&lt;script&gt;new Date().getFullYear()&gt;2016&amp;&amp;document.write(&#34; - &#34;&#43;new Date().getFullYear());&lt;/script&gt; datanerds.io. &lt;a href=&#34;http://creativecommons.org/licenses/by/4.0/&#34;&gt;Some rights reserved&lt;/a&gt;.</copyright>
     <lastBuildDate>Wed, 23 Nov 2016 19:45:48 -0700</lastBuildDate>
     <atom:link href="http://datanerds.io/index.xml" rel="self" type="application/rss+xml" />
-    
     <item>
       <title>WAT - Cassandra: Row level consistency #$@&amp;%*!</title>
       <link>http://datanerds.io/post/cassandra-no-row-consistency/</link>
       <pubDate>Wed, 23 Nov 2016 19:45:48 -0700</pubDate>
-      
       <guid>http://datanerds.io/post/cassandra-no-row-consistency/</guid>
-      <description>
-
-&lt;p&gt;&lt;strong&gt;TL;DR&lt;/strong&gt; Cassandra &lt;strong&gt;&lt;em&gt;is not&lt;/em&gt;&lt;/strong&gt; row level consistent!!!&lt;/p&gt;
-
-&lt;p&gt;We published a &lt;a href=&#34;http://datanerds.io/post/WAT-cassandra-1/&#34;&gt;blog post&lt;/a&gt; about some surprising and unexpected behaviors while using Apache Cassandra/DataStax Enterprise some weeks back. Recently, we encountered even more WAT moments and I believe this one is the most distressing.&lt;/p&gt;
-
-&lt;p&gt;In a nutshell: &lt;strong&gt;We discovered corrupted data&lt;/strong&gt; and it took us a while to understand what was happening and why that data was corrupt. Let&amp;rsquo;s dive into the problem:&lt;/p&gt;
-
-&lt;p&gt;Imagine a table with a primary key to identify an entity. Each entity can have a boolean state to mark it as locked. Additionally, each entity has a revision counter which is incremented on changes to the entity.&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;CREATE TABLE locks (
-    id text PRIMARY KEY,
-    lock boolean,
-    revision bigint
-);
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;For an initial lock of the entity &amp;lsquo;Tom&amp;rsquo; we execute an &lt;code&gt;INSERT&lt;/code&gt;. Since we need to make sure that no one else is obtaining the lock at the same time we make use of a Lightweight transaction (LWT) using &lt;code&gt;IF NOT EXISTS&lt;/code&gt;. It is possible that something goes wrong or our application even dies before releasing the lock, resulting in deadlocked entities where &lt;code&gt;lock&lt;/code&gt; stays &lt;code&gt;true&lt;/code&gt;. To ensure that the lock is released in such a case, we release the lock after a certain amount of time. This is achieved by using Cassandra&amp;rsquo;s Time To Live (&lt;code&gt;TTL&lt;/code&gt;) feature.&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;INSERT INTO locks (id, lock, revision)
-VALUES (&#39;Tom&#39;, true, 1)
-IF NOT EXISTS USING TTL 20;
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Great! After finishing some other calculations for our entity Tom, we release the lock via a simple UPDATE:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;UPDATE locks SET lock=false, revision=2 WHERE id=&#39;Tom&#39;;
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;The result should look like this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT * FROM locks WHERE id=&#39;Tom&#39;;
-
- id  | lock  | revision
------+-------+----------
- Tom | False |        2
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;To our surprise this was not always the case. In ~0.1% of the rows the result looked like this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT * FROM locks WHERE id=&#39;Tom&#39;;
-
- id  | lock | revision
------+------+----------
- Tom | null |        2
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Given the queries we are using, the row should not be in a state where lock is null and a revision is set at the same time.&lt;/p&gt;
-
-&lt;p&gt;After deeper investigations of audit logs and a deep dive into the SSTables it turned out that we did run into a timestamp tie. The cluster node our client is talking to sees a stream of changes with two or more changes happening to the same entry in the lock table at the exact same time. Obviously the calculation we are doing in between acquiring the lock and releasing it is not taking enough time (microseconds). Interesting, so what is the resolution strategy for multiple updates at the same time? &lt;em&gt;&amp;ldquo;[&amp;hellip;] if there are two updates, the one with the lexically larger value is selected. [&amp;hellip;]&amp;rdquo;&lt;/em&gt; [1]&lt;/p&gt;
-
-&lt;p&gt;&lt;strong&gt;lexical larger value? LEXICAL LARGER VALUE??&lt;/strong&gt;&lt;/p&gt;
-
-&lt;p&gt;So what happens to our statements? When the acquire and release of the lock happen at the same exact time, Cassandra will compare on &lt;strong&gt;&lt;em&gt;cell level&lt;/em&gt;&lt;/strong&gt;, I repeat, &lt;strong&gt;&lt;em&gt;CELL LEVEL&lt;/em&gt;&lt;/strong&gt; which one is greater and will choose the value for this cell from the query for the final state. For the lock column this means: &lt;code&gt;true &amp;gt; false&lt;/code&gt; so it will take that portion of the &lt;code&gt;INSERT&lt;/code&gt;. For the revision column the &lt;code&gt;UPDATE&lt;/code&gt; query will win since &lt;code&gt;2 &amp;gt; 1&lt;/code&gt;. Due to the usage of &lt;code&gt;TTL&lt;/code&gt; its content will be removed after 20 seconds&amp;hellip; hence the column for lock will become &lt;code&gt;null&lt;/code&gt;, #$@&amp;amp;%!!! There is no row level consistency in Cassandra, #$@&amp;amp;%!!!&lt;/p&gt;
-
-&lt;p&gt;&lt;img src=&#34;http://datanerds.io/img/wat/wat7.jpg&#34; alt=&#34;&#34; /&gt;&lt;/p&gt;
-
-&lt;h3 id=&#34;workaround&#34;&gt;Workaround&lt;/h3&gt;
-
-&lt;p&gt;The latter release &lt;code&gt;UPDATE&lt;/code&gt; will also be executed using LWT. When a tie happens using LWT it will return with &lt;code&gt;applied = false&lt;/code&gt;. In these cases we just retry the release query&amp;hellip;&lt;/p&gt;
-
-&lt;p&gt;&lt;img src=&#34;http://datanerds.io/img/mindblown.gif&#34; alt=&#34;&#34; /&gt;&lt;/p&gt;
-
-&lt;h3 id=&#34;possible-cassandra-improvements&#34;&gt;Possible Cassandra Improvements&lt;/h3&gt;
-
-&lt;ol&gt;
-&lt;li&gt;The server should log timestamp ties. We were just lucky to find the glitch in the data: &lt;a href=&#34;https://issues.apache.org/jira/browse/CASSANDRA-12587&#34;&gt;https://issues.apache.org/jira/browse/CASSANDRA-12587&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;Since the origin of the competing query is the same process, a sequence number should be sufficient to define order: &lt;a href=&#34;https://issues.apache.org/jira/browse/CASSANDRA-6123&#34;&gt;https://issues.apache.org/jira/browse/CASSANDRA-6123&lt;/a&gt;&lt;/li&gt;
-&lt;/ol&gt;
-
-&lt;p&gt;[1] - &lt;a href=&#34;http://cassandra.apache.org/doc/latest/faq/index.html#what-happens-if-two-updates-are-made-with-the-same-timestamp&#34;&gt;http://cassandra.apache.org/doc/latest/faq/index.html#what-happens-if-two-updates-are-made-with-the-same-timestamp&lt;/a&gt;&lt;/p&gt;
-</description>
+      <description>&lt;p&gt;&lt;strong&gt;TL;DR&lt;/strong&gt; Cassandra &lt;strong&gt;&lt;em&gt;is not&lt;/em&gt;&lt;/strong&gt; row level consistent!!!&lt;/p&gt;&#xA;&lt;p&gt;We published a &lt;a href=&#34;http://datanerds.io/post/wat-cassandra-1/&#34;&gt;blog post&lt;/a&gt; about some surprising and unexpected behaviors while using Apache Cassandra/DataStax Enterprise some weeks back. Recently, we encountered even more WAT moments and I believe this one is the most distressing.&lt;/p&gt;&#xA;&lt;p&gt;In a nutshell: &lt;strong&gt;We discovered corrupted data&lt;/strong&gt; and it took us a while to understand what was happening and why that data was corrupt. Let&amp;rsquo;s dive into the problem:&lt;/p&gt;</description>
     </item>
-    
     <item>
       <title>WAT - Cassandra</title>
-      <link>http://datanerds.io/post/WAT-cassandra-1/</link>
+      <link>http://datanerds.io/post/wat-cassandra-1/</link>
       <pubDate>Mon, 11 Apr 2016 18:00:00 +0200</pubDate>
-      
-      <guid>http://datanerds.io/post/WAT-cassandra-1/</guid>
-      <description>
-
-&lt;p&gt;When using Cassandra*, you sometimes have these &lt;em&gt;WAT&lt;/em&gt; moments. If you don&amp;rsquo;t know what we are talking about, just take a short &lt;a href=&#34;https://www.destroyallsoftware.com/talks/wat&#34;&gt;detour&lt;/a&gt;.&lt;/p&gt;
-
-&lt;p&gt;Taking a step back and figuring out what things are built for is usually a good idea, so what was Cassandra envisioned for?&lt;/p&gt;
-
-&lt;blockquote&gt;
-&lt;p&gt;Cassandra does not support a full relational data model; instead, it provides clients with a simple data model that supports dynamic control over data layout and format.&lt;/p&gt;
-
-&lt;p&gt;&amp;ndash; &lt;cite&gt;&lt;a href=&#34;https://www.facebook.com/notes/facebook-engineering/cassandra-a-structured-storage-system-on-a-p2p-network/24413138919/&#34;&gt;Original Cassandra Paper&lt;/a&gt;&lt;/cite&gt;&lt;/p&gt;
-&lt;/blockquote&gt;
-
-&lt;p&gt;Cool, sounds like a a reasonable statement. When we started using Cassandra we had to develop an application with a dynamic data model. Amongst other features this made us giving Cassandra a shot. So here is how altering Cassandra tables leads to some WAT&amp;rsquo;s.&lt;/p&gt;
-
-&lt;h1 id=&#34;setting-up-the-environment&#34;&gt;Setting up the environment&lt;/h1&gt;
-
-&lt;p&gt;First of all we need a keyspace to play around with:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;cqlsh&amp;gt; CREATE KEYSPACE fun WITH replication ={&#39;class&#39;: &#39;SimpleStrategy&#39;,
-    &#39;replication_factor&#39;: 1 };
-cqlsh&amp;gt; USE fun;
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;h1 id=&#34;collection-column-re-use&#34;&gt;Collection Column re-use&lt;/h1&gt;
-
-&lt;p&gt;Let&amp;rsquo;s now have a simple table with an identifier and a collection column&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;cqlsh:fun&amp;gt; CREATE TABLE hello (id uuid, world list&amp;lt;int&amp;gt;, PRIMARY KEY (id));
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Damn&amp;hellip; we used the wrong type, it rather should be a list of &lt;code&gt;varchar&lt;/code&gt;. No problem&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;cqlsh:fun&amp;gt; ALTER TABLE hello DROP world;
-cqlsh:fun&amp;gt; ALTER TABLE hello ADD world list&amp;lt;varchar&amp;gt; ;
-Bad Request: Cannot add a collection with the name world because a collection
-with the same name and a different type has already been used in the past
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;&lt;img src=&#34;http://datanerds.io/img/wat/wat1.jpg&#34; alt=&#34;&#34; /&gt;&lt;/p&gt;
-
-&lt;h1 id=&#34;be-prepared-forever&#34;&gt;Be prepared! FOREVER!&lt;/h1&gt;
-
-&lt;p&gt;Let&amp;rsquo;s take a look at the java driver. Initially we create a simple test table with two columns. The &lt;code&gt;id&lt;/code&gt; column being the primary key and an arbitrary text column called &lt;code&gt;initial_column&lt;/code&gt;.&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;cqlsh:fun&amp;gt; CREATE TABLE test(
-    id text,
-    initial_column text,
-    PRIMARY KEY (id));
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;When we prepare a &lt;code&gt;SELECT *&lt;/code&gt; statement on that table, bind and execute it the returned column definitions are as expected &lt;code&gt;[id, initial_column]&lt;/code&gt;.&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-java&#34;&gt;Cluster cluster = Cluster.builder().addContactPoints(&amp;quot;localhost&amp;quot;).build();
-Session session = cluster.connect(&amp;quot;fun&amp;quot;);
-PreparedStatement prepared = session.prepare(&amp;quot;select * from test&amp;quot;);
-ResultSet result = session.execute(prepared.bind());
-logger.info(&amp;quot;Columns before alter table: {}&amp;quot;, getColumnDefinitions(result));
-// Columns before alter table: [id, initial_column]
-
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Ok, now we figured we need an additional column. It&amp;rsquo;s as easy as this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;cqlsh:fun&amp;gt; ALTER TABLE test ADD new_column text;
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Let&amp;rsquo;s bind the prepared statement again and take a look at the returned columns:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-java&#34;&gt;result = session.execute(prepared.bind());
-logger.info(&amp;quot;Columns after alter table: {}&amp;quot;, getColumnDefinitions(result));
-// Columns after alter table: [id, initial_column]
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Hmmm, where&amp;rsquo;s the new column? Nevermind, just re-preparing the statement should fix the problem, shouldn&amp;rsquo;t it?&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-java&#34;&gt;prepared = session.prepare(&amp;quot;select * from test&amp;quot;);
-result = session.execute(prepared.bind()); // Cassandra Warning: &amp;quot;Re-preparing already prepared query select * from test. Please note that preparing the same query more than once is generally an anti-pattern and will likely affect performance. Consider preparing the statement only once.&amp;quot;
-logger.info(&amp;quot;Columns after re-prepare: {}&amp;quot;, getColumnDefinitions(result));
-// Columns after re-prepare: [id, initial_column]
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;&lt;img src=&#34;http://datanerds.io/img/wat/wat2.jpg&#34; alt=&#34;&#34; /&gt;&lt;/p&gt;
-
-&lt;p&gt;A quick check whether the new column has been added or not, without using a prepared statement:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-java&#34;&gt;result = session.execute(&amp;quot;select * from test&amp;quot;);
-logger.info(&amp;quot;Columns after unprepared execute: {}&amp;quot;, getColumnDefinitions(result));
-// Columns after unprepared execute: [id, initial_column, new_column]
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Yup, the column is there. So let&amp;rsquo;s investigate whether creating a new &lt;code&gt;Session&lt;/code&gt; with the cluster helps:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-java&#34;&gt;session.close();
-session = cluster.connect(&amp;quot;fun&amp;quot;);
-prepared = session.prepare(&amp;quot;select * from test&amp;quot;); // Cassandra Warning: &amp;quot;Re-preparing already prepared query select * from test. Please note that preparing the same query more than once is generally an anti-pattern and will likely affect performance. Consider preparing the statement only once.&amp;quot;
-result = session.execute(prepared.bind());
-logger.info(&amp;quot;Columns recreating session via re-connect on cluster: {}&amp;quot;, getColumnDefinitions(result));
-// Columns recreating session via re-connect on cluster: [id, initial_column]
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Nope. Apparently only re-instantiating the cluster does the job:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-java&#34;&gt;session.close();
-cluster.close();
-session = Cluster.builder().addContactPoints(&amp;quot;localhost&amp;quot;).build().connect(&amp;quot;fun&amp;quot;);
-prepared = session.prepare(&amp;quot;select * from test&amp;quot;);
-result = session.execute(prepared.bind());
-logger.info(&amp;quot;Columns after recreating session via re-instantiating cluster: {}&amp;quot;, getColumnDefinitions(result));
-// Columns after recreating session via re-instantiating cluster: [id, initial_column, new_column]
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Since the prepared statements are identified by the hash of the query string, altering this statement e.g. through adding useless whitespaces gets you a fresh prepared statement.&lt;/p&gt;
-
-&lt;p&gt;&lt;img src=&#34;http://datanerds.io/img/wat/wat4.jpg&#34; alt=&#34;&#34; /&gt;&lt;/p&gt;
-
-&lt;h1 id=&#34;upsert-in-space&#34;&gt;UPSERT in Space&lt;/h1&gt;
-
-&lt;blockquote&gt;
-&lt;p&gt;Internally, insert and update operations are identical.&lt;/p&gt;
-
-&lt;p&gt;&amp;ndash; &lt;cite&gt;&lt;a href=&#34;https://docs.datastax.com/en/cql/3.1/cql/cql_reference/insert_r.html&#34;&gt;INSERT - Cassandra Documentation&lt;/a&gt; &amp;amp; &lt;a href=&#34;https://docs.datastax.com/en/cql/3.1/cql/cql_reference/update_r.html&#34;&gt;UPDATE - Cassandra Documentation&lt;/a&gt;&lt;/cite&gt;&lt;/p&gt;
-&lt;/blockquote&gt;
-
-&lt;p&gt;That could become useful. Let&amp;rsquo;s &lt;code&gt;INSERT&lt;/code&gt; an entry and &lt;code&gt;UPDATE&lt;/code&gt; the &lt;code&gt;data&lt;/code&gt; value to be &lt;code&gt;null&lt;/code&gt;:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;cqlsh:fun&amp;gt; CREATE TABLE test(
-    id int,
-    data text,
-    PRIMARY KEY (id));
-cqlsh:fun&amp;gt; INSERT INTO test (id, data) VALUES (1, &#39;hello&#39;);
-cqlsh:fun&amp;gt; UPDATE test SET data=null WHERE id=1;
-cqlsh:fun&amp;gt; SELECT * FROM test;
-
-id | data
-----+------
- 1 | null
-
-(1 rows)
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Nothing unusual here. Let&amp;rsquo;s try the same with an &amp;ldquo;UPSERT&amp;rdquo;, since it is identical.&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;cqlsh:fun&amp;gt; UPDATE test SET data=&#39;hello world&#39; WHERE id=2;
-cqlsh:fun&amp;gt; SELECT * FROM test;
-
-id | data
-----+-------------
- 1 |        null
- 2 | hello world
-
- (2 rows)
-cqlsh:fun&amp;gt; UPDATE test SET data=null WHERE id=2;
-cqlsh:fun&amp;gt; SELECT * FROM test;
-
-id | data
-----+------
- 1 | null
-
-(1 rows)
-
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;&lt;img src=&#34;http://datanerds.io/img/wat/wat3.jpg&#34; alt=&#34;&#34; /&gt;&lt;/p&gt;
-
-&lt;p&gt;* Posted WAT&amp;rsquo;s have been tested with DSE 4.8.x and Apache Cassandra 2.1.x&lt;/p&gt;
-</description>
+      <guid>http://datanerds.io/post/wat-cassandra-1/</guid>
+      <description>&lt;p&gt;When using Cassandra*, you sometimes have these &lt;em&gt;WAT&lt;/em&gt; moments. If you don&amp;rsquo;t know what we are talking about, just take a short &lt;a href=&#34;https://www.destroyallsoftware.com/talks/wat&#34;&gt;detour&lt;/a&gt;.&lt;/p&gt;&#xA;&lt;p&gt;Taking a step back and figuring out what things are built for is usually a good idea, so what was Cassandra envisioned for?&lt;/p&gt;&#xA;&lt;blockquote&gt;&#xA;&lt;p&gt;Cassandra does not support a full relational data model; instead, it provides clients with a simple data model that supports dynamic control over data layout and format.&lt;/p&gt;</description>
     </item>
-    
     <item>
       <title>LACK - Consensus via Cassandra</title>
       <link>http://datanerds.io/post/lack-initial-release/</link>
       <pubDate>Sat, 26 Mar 2016 18:41:00 +0100</pubDate>
-      
       <guid>http://datanerds.io/post/lack-initial-release/</guid>
-      <description>
-
-&lt;p&gt;In late 2014 DataStax published a &lt;a href=&#34;http://www.datastax.com/dev/blog/consensus-on-cassandra&#34;&gt;blog post&lt;/a&gt; in which they explain how Cassandra can be leveraged in order to reach consensus in a distributed environment. A detailed explanation can be found in mentioned article. In essence, a distributed lock or mutex mechanism to enforce that only one resource in a distributed and concurrent environment can be changed at the same time. Inspired by said article &lt;em&gt;LACK [luhk]&lt;/em&gt; was implemented. It is a very thin Java API on top of a few Cassandra queries. It is not meant as a consensus library such as libraft or atomix. We just needed something implemented fast and on top of Cassandra.&lt;/p&gt;
-
-&lt;h1 id=&#34;creating-a-keyspace&#34;&gt;Creating a keyspace&lt;/h1&gt;
-
-&lt;p&gt;In order to run LACK you have to point it to a keyspace in which it can create necessary table.&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;CREATE KEYSPACE lack
-    WITH REPLICATION = { &#39;class&#39; : &#39;SimpleStrategy&#39;, &#39;replication_factor&#39; : 1 };
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;h1 id=&#34;locking&#34;&gt;Locking&lt;/h1&gt;
-
-&lt;p&gt;You can import LACK from Maven Central Repository:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-xml&#34;&gt;&amp;lt;dependency&amp;gt;
-    &amp;lt;groupId&amp;gt;io.datanerds&amp;lt;/groupId&amp;gt;
-    &amp;lt;artifactId&amp;gt;lack&amp;lt;/artifactId&amp;gt;
-    &amp;lt;version&amp;gt;0.1.1&amp;lt;/version&amp;gt;
-&amp;lt;/dependency&amp;gt;
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;The configuration of LACK is done via the &lt;code&gt;LackConfig&lt;/code&gt; POJO, e.g. using this constructor: &lt;code&gt;LackConfig(String username, String password, String[] nodes, String keyspace, int ttlInSeconds)&lt;/code&gt;.&lt;/p&gt;
-
-&lt;p&gt;Connecting to a a local cluster using the previously created keyspace and a TTL of 42 seconds:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-java&#34;&gt;LackConfig config = new LackConfig(&amp;quot;user&amp;quot;, &amp;quot;pass&amp;quot;, new String[]{&amp;quot;127.0.0.1&amp;quot;}, &amp;quot;lack&amp;quot;, 42);
-Lack lack = new Lack(config, &amp;quot;owner-1&amp;quot;);
-
-// Locking the resource:
-lack.acquire(&amp;quot;user-1&amp;quot;);
-...
-// Renewing the lock in case we need longer than 42 seconds:
-lack.renew(&amp;quot;user-1&amp;quot;);
-...
-// Releasing the lock in case we have finished our operation:
-lack.release(&amp;quot;user-1&amp;quot;);
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;In case one of the above mentioned methods can not be executed since e.g. a resource might already be locked, a &lt;code&gt;LackException&lt;/code&gt; will be thrown. To make sure you implement a logic for such cases, it is a checked exception.&lt;/p&gt;
-
-&lt;p&gt;To find some more resource take a look here: &lt;a href=&#34;https://github.com/datanerds-io/lack/&#34;&gt;GitHub&lt;/a&gt;, &lt;a href=&#34;http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22io.datanerds%22%20a%3A%22lack%22&#34;&gt;Maven Central&lt;/a&gt;&lt;/p&gt;
-</description>
+      <description>&lt;p&gt;In late 2014 DataStax published a &lt;a href=&#34;http://www.datastax.com/dev/blog/consensus-on-cassandra&#34;&gt;blog post&lt;/a&gt; in which they explain how Cassandra can be leveraged in order to reach consensus in a distributed environment. A detailed explanation can be found in mentioned article. In essence, a distributed lock or mutex mechanism to enforce that only one resource in a distributed and concurrent environment can be changed at the same time. Inspired by said article &lt;em&gt;LACK [luhk]&lt;/em&gt; was implemented. It is a very thin Java API on top of a few Cassandra queries. It is not meant as a consensus library such as libraft or atomix. We just needed something implemented fast and on top of Cassandra.&lt;/p&gt;</description>
     </item>
-    
     <item>
       <title>Apache Kafka eBook</title>
       <link>http://datanerds.io/post/kafka101-ebook/</link>
       <pubDate>Tue, 24 Nov 2015 16:13:29 +0200</pubDate>
-      
       <guid>http://datanerds.io/post/kafka101-ebook/</guid>
-      <description>&lt;p&gt;During 2015 Frank, Tobias and I published multiple articles in the German &amp;ldquo;Java Magazin&amp;rdquo; which cover Apache Kafka related topics such as basic fundamentals, the use of the &lt;a href=&#34;http://docs.confluent.io/2.0.0/schema-registry/docs/index.html&#34;&gt;Schema Registry&lt;/a&gt; and the &lt;a href=&#34;http://docs.confluent.io/2.0.0/kafka-rest/docs/index.html&#34;&gt;REST Proxy&lt;/a&gt;. S&amp;amp;S Media decided to combine those articles in a lightweight eBook which is available in their &lt;a href=&#34;https://entwickler.de/press/apache-kafka-191983.html&#34;&gt;online store&lt;/a&gt; as well as in the &lt;a href=&#34;http://www.amazon.de/dp/B018ER1AXQ&#34;&gt;Kindle Shop&lt;/a&gt;.&lt;/p&gt;
-
-&lt;p&gt;The sample source code can (as always) be found on GitHub: &lt;a href=&#34;https://github.com/kafka101/java-news-feed&#34;&gt;Basic Messaging&lt;/a&gt;, &lt;a href=&#34;https://github.com/kafka101/clickstream-schema&#34;&gt;Schema Registry&lt;/a&gt; &amp;amp; &lt;a href=&#34;https://github.com/kafka101/clickstream-rest-proxy&#34;&gt;REST Proxy&lt;/a&gt;.&lt;/p&gt;
-</description>
+      <description>&lt;p&gt;During 2015 Frank, Tobias and I published multiple articles in the German &amp;ldquo;Java Magazin&amp;rdquo; which cover Apache Kafka related topics such as basic fundamentals, the use of the &lt;a href=&#34;http://docs.confluent.io/2.0.0/schema-registry/docs/index.html&#34;&gt;Schema Registry&lt;/a&gt; and the &lt;a href=&#34;http://docs.confluent.io/2.0.0/kafka-rest/docs/index.html&#34;&gt;REST Proxy&lt;/a&gt;. S&amp;amp;S Media decided to combine those articles in a lightweight eBook which is available in their &lt;a href=&#34;https://entwickler.de/press/apache-kafka-191983.html&#34;&gt;online store&lt;/a&gt; as well as in the &lt;a href=&#34;http://www.amazon.de/dp/B018ER1AXQ&#34;&gt;Kindle Shop&lt;/a&gt;.&lt;/p&gt;&#xA;&lt;p&gt;The sample source code can (as always) be found on GitHub: &lt;a href=&#34;https://github.com/kafka101/java-news-feed&#34;&gt;Basic Messaging&lt;/a&gt;, &lt;a href=&#34;https://github.com/kafka101/clickstream-schema&#34;&gt;Schema Registry&lt;/a&gt; &amp;amp; &lt;a href=&#34;https://github.com/kafka101/clickstream-rest-proxy&#34;&gt;REST Proxy&lt;/a&gt;.&lt;/p&gt;</description>
     </item>
-    
     <item>
       <title>Kafka 101 at JAXenter.de</title>
       <link>http://datanerds.io/post/kafka101-jaxenter/</link>
       <pubDate>Wed, 28 Oct 2015 19:21:00 +0200</pubDate>
-      
       <guid>http://datanerds.io/post/kafka101-jaxenter/</guid>
-      <description>&lt;p&gt;In October an introduction to Apache Kafka called &amp;ldquo;Kafka 101&amp;rdquo; written by Frank and me got published in issue 08/2015 of the German &amp;ldquo;Java Magazin&amp;rdquo;. The article itself introduces the basic concepts and methodologies used in Kafka, plus simple examples to &lt;em&gt;publish&lt;/em&gt; &amp;amp; &lt;em&gt;consume&lt;/em&gt; messages.&lt;/p&gt;
-
-&lt;p&gt;Mentioned article also got published online: &lt;a href=&#34;https://jaxenter.de/kafka-101-28692&#34;&gt;JAXenter.de&lt;/a&gt;. The example source code can be found on &lt;a href=&#34;https://github.com/kafka101/java-news-feed&#34;&gt;GitHub&lt;/a&gt;.&lt;/p&gt;
-</description>
+      <description>&lt;p&gt;In October an introduction to Apache Kafka called &amp;ldquo;Kafka 101&amp;rdquo; written by Frank and me got published in issue 08/2015 of the German &amp;ldquo;Java Magazin&amp;rdquo;. The article itself introduces the basic concepts and methodologies used in Kafka, plus simple examples to &lt;em&gt;publish&lt;/em&gt; &amp;amp; &lt;em&gt;consume&lt;/em&gt; messages.&lt;/p&gt;&#xA;&lt;p&gt;Mentioned article also got published online: &lt;a href=&#34;https://jaxenter.de/kafka-101-28692&#34;&gt;JAXenter.de&lt;/a&gt;. The example source code can be found on &lt;a href=&#34;https://github.com/kafka101/java-news-feed&#34;&gt;GitHub&lt;/a&gt;.&lt;/p&gt;</description>
     </item>
-    
   </channel>
 </rss>

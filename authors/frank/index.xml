@@ -1,187 +1,19 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Frank on datanerds.io</title>
-    <link>http://datanerds.io/authors/frank/index.xml</link>
+    <link>http://datanerds.io/authors/frank/</link>
     <description>Recent content in Frank on datanerds.io</description>
-    <generator>Hugo -- gohugo.io</generator>
+    <generator>Hugo</generator>
     <language>en-us</language>
-    <copyright>Copyright © 2016&lt;script&gt;new Date().getFullYear()&gt;2016&amp;&amp;document.write(&#34; - &#34;&#43;new Date().getFullYear());&lt;/script&gt; datanerds.io. &lt;a href=&#34;http://creativecommons.org/licenses/by/4.0/&#34;&gt;Some rights reserved&lt;/a&gt;.</copyright>
+    <lastBuildDate>Mon, 11 Apr 2016 18:00:00 +0200</lastBuildDate>
     <atom:link href="http://datanerds.io/authors/frank/index.xml" rel="self" type="application/rss+xml" />
-    
     <item>
       <title>WAT - Cassandra</title>
-      <link>http://datanerds.io/post/WAT-cassandra-1/</link>
+      <link>http://datanerds.io/post/wat-cassandra-1/</link>
       <pubDate>Mon, 11 Apr 2016 18:00:00 +0200</pubDate>
-      
-      <guid>http://datanerds.io/post/WAT-cassandra-1/</guid>
-      <description>
-
-&lt;p&gt;When using Cassandra*, you sometimes have these &lt;em&gt;WAT&lt;/em&gt; moments. If you don&amp;rsquo;t know what we are talking about, just take a short &lt;a href=&#34;https://www.destroyallsoftware.com/talks/wat&#34;&gt;detour&lt;/a&gt;.&lt;/p&gt;
-
-&lt;p&gt;Taking a step back and figuring out what things are built for is usually a good idea, so what was Cassandra envisioned for?&lt;/p&gt;
-
-&lt;blockquote&gt;
-&lt;p&gt;Cassandra does not support a full relational data model; instead, it provides clients with a simple data model that supports dynamic control over data layout and format.&lt;/p&gt;
-
-&lt;p&gt;&amp;ndash; &lt;cite&gt;&lt;a href=&#34;https://www.facebook.com/notes/facebook-engineering/cassandra-a-structured-storage-system-on-a-p2p-network/24413138919/&#34;&gt;Original Cassandra Paper&lt;/a&gt;&lt;/cite&gt;&lt;/p&gt;
-&lt;/blockquote&gt;
-
-&lt;p&gt;Cool, sounds like a a reasonable statement. When we started using Cassandra we had to develop an application with a dynamic data model. Amongst other features this made us giving Cassandra a shot. So here is how altering Cassandra tables leads to some WAT&amp;rsquo;s.&lt;/p&gt;
-
-&lt;h1 id=&#34;setting-up-the-environment&#34;&gt;Setting up the environment&lt;/h1&gt;
-
-&lt;p&gt;First of all we need a keyspace to play around with:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;cqlsh&amp;gt; CREATE KEYSPACE fun WITH replication ={&#39;class&#39;: &#39;SimpleStrategy&#39;,
-    &#39;replication_factor&#39;: 1 };
-cqlsh&amp;gt; USE fun;
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;h1 id=&#34;collection-column-re-use&#34;&gt;Collection Column re-use&lt;/h1&gt;
-
-&lt;p&gt;Let&amp;rsquo;s now have a simple table with an identifier and a collection column&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;cqlsh:fun&amp;gt; CREATE TABLE hello (id uuid, world list&amp;lt;int&amp;gt;, PRIMARY KEY (id));
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Damn&amp;hellip; we used the wrong type, it rather should be a list of &lt;code&gt;varchar&lt;/code&gt;. No problem&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;cqlsh:fun&amp;gt; ALTER TABLE hello DROP world;
-cqlsh:fun&amp;gt; ALTER TABLE hello ADD world list&amp;lt;varchar&amp;gt; ;
-Bad Request: Cannot add a collection with the name world because a collection
-with the same name and a different type has already been used in the past
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;&lt;img src=&#34;http://datanerds.io/img/wat/wat1.jpg&#34; alt=&#34;&#34; /&gt;&lt;/p&gt;
-
-&lt;h1 id=&#34;be-prepared-forever&#34;&gt;Be prepared! FOREVER!&lt;/h1&gt;
-
-&lt;p&gt;Let&amp;rsquo;s take a look at the java driver. Initially we create a simple test table with two columns. The &lt;code&gt;id&lt;/code&gt; column being the primary key and an arbitrary text column called &lt;code&gt;initial_column&lt;/code&gt;.&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;cqlsh:fun&amp;gt; CREATE TABLE test(
-    id text,
-    initial_column text,
-    PRIMARY KEY (id));
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;When we prepare a &lt;code&gt;SELECT *&lt;/code&gt; statement on that table, bind and execute it the returned column definitions are as expected &lt;code&gt;[id, initial_column]&lt;/code&gt;.&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-java&#34;&gt;Cluster cluster = Cluster.builder().addContactPoints(&amp;quot;localhost&amp;quot;).build();
-Session session = cluster.connect(&amp;quot;fun&amp;quot;);
-PreparedStatement prepared = session.prepare(&amp;quot;select * from test&amp;quot;);
-ResultSet result = session.execute(prepared.bind());
-logger.info(&amp;quot;Columns before alter table: {}&amp;quot;, getColumnDefinitions(result));
-// Columns before alter table: [id, initial_column]
-
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Ok, now we figured we need an additional column. It&amp;rsquo;s as easy as this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;cqlsh:fun&amp;gt; ALTER TABLE test ADD new_column text;
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Let&amp;rsquo;s bind the prepared statement again and take a look at the returned columns:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-java&#34;&gt;result = session.execute(prepared.bind());
-logger.info(&amp;quot;Columns after alter table: {}&amp;quot;, getColumnDefinitions(result));
-// Columns after alter table: [id, initial_column]
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Hmmm, where&amp;rsquo;s the new column? Nevermind, just re-preparing the statement should fix the problem, shouldn&amp;rsquo;t it?&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-java&#34;&gt;prepared = session.prepare(&amp;quot;select * from test&amp;quot;);
-result = session.execute(prepared.bind()); // Cassandra Warning: &amp;quot;Re-preparing already prepared query select * from test. Please note that preparing the same query more than once is generally an anti-pattern and will likely affect performance. Consider preparing the statement only once.&amp;quot;
-logger.info(&amp;quot;Columns after re-prepare: {}&amp;quot;, getColumnDefinitions(result));
-// Columns after re-prepare: [id, initial_column]
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;&lt;img src=&#34;http://datanerds.io/img/wat/wat2.jpg&#34; alt=&#34;&#34; /&gt;&lt;/p&gt;
-
-&lt;p&gt;A quick check whether the new column has been added or not, without using a prepared statement:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-java&#34;&gt;result = session.execute(&amp;quot;select * from test&amp;quot;);
-logger.info(&amp;quot;Columns after unprepared execute: {}&amp;quot;, getColumnDefinitions(result));
-// Columns after unprepared execute: [id, initial_column, new_column]
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Yup, the column is there. So let&amp;rsquo;s investigate whether creating a new &lt;code&gt;Session&lt;/code&gt; with the cluster helps:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-java&#34;&gt;session.close();
-session = cluster.connect(&amp;quot;fun&amp;quot;);
-prepared = session.prepare(&amp;quot;select * from test&amp;quot;); // Cassandra Warning: &amp;quot;Re-preparing already prepared query select * from test. Please note that preparing the same query more than once is generally an anti-pattern and will likely affect performance. Consider preparing the statement only once.&amp;quot;
-result = session.execute(prepared.bind());
-logger.info(&amp;quot;Columns recreating session via re-connect on cluster: {}&amp;quot;, getColumnDefinitions(result));
-// Columns recreating session via re-connect on cluster: [id, initial_column]
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Nope. Apparently only re-instantiating the cluster does the job:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-java&#34;&gt;session.close();
-cluster.close();
-session = Cluster.builder().addContactPoints(&amp;quot;localhost&amp;quot;).build().connect(&amp;quot;fun&amp;quot;);
-prepared = session.prepare(&amp;quot;select * from test&amp;quot;);
-result = session.execute(prepared.bind());
-logger.info(&amp;quot;Columns after recreating session via re-instantiating cluster: {}&amp;quot;, getColumnDefinitions(result));
-// Columns after recreating session via re-instantiating cluster: [id, initial_column, new_column]
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Since the prepared statements are identified by the hash of the query string, altering this statement e.g. through adding useless whitespaces gets you a fresh prepared statement.&lt;/p&gt;
-
-&lt;p&gt;&lt;img src=&#34;http://datanerds.io/img/wat/wat4.jpg&#34; alt=&#34;&#34; /&gt;&lt;/p&gt;
-
-&lt;h1 id=&#34;upsert-in-space&#34;&gt;UPSERT in Space&lt;/h1&gt;
-
-&lt;blockquote&gt;
-&lt;p&gt;Internally, insert and update operations are identical.&lt;/p&gt;
-
-&lt;p&gt;&amp;ndash; &lt;cite&gt;&lt;a href=&#34;https://docs.datastax.com/en/cql/3.1/cql/cql_reference/insert_r.html&#34;&gt;INSERT - Cassandra Documentation&lt;/a&gt; &amp;amp; &lt;a href=&#34;https://docs.datastax.com/en/cql/3.1/cql/cql_reference/update_r.html&#34;&gt;UPDATE - Cassandra Documentation&lt;/a&gt;&lt;/cite&gt;&lt;/p&gt;
-&lt;/blockquote&gt;
-
-&lt;p&gt;That could become useful. Let&amp;rsquo;s &lt;code&gt;INSERT&lt;/code&gt; an entry and &lt;code&gt;UPDATE&lt;/code&gt; the &lt;code&gt;data&lt;/code&gt; value to be &lt;code&gt;null&lt;/code&gt;:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;cqlsh:fun&amp;gt; CREATE TABLE test(
-    id int,
-    data text,
-    PRIMARY KEY (id));
-cqlsh:fun&amp;gt; INSERT INTO test (id, data) VALUES (1, &#39;hello&#39;);
-cqlsh:fun&amp;gt; UPDATE test SET data=null WHERE id=1;
-cqlsh:fun&amp;gt; SELECT * FROM test;
-
-id | data
-----+------
- 1 | null
-
-(1 rows)
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Nothing unusual here. Let&amp;rsquo;s try the same with an &amp;ldquo;UPSERT&amp;rdquo;, since it is identical.&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;cqlsh:fun&amp;gt; UPDATE test SET data=&#39;hello world&#39; WHERE id=2;
-cqlsh:fun&amp;gt; SELECT * FROM test;
-
-id | data
-----+-------------
- 1 |        null
- 2 | hello world
-
- (2 rows)
-cqlsh:fun&amp;gt; UPDATE test SET data=null WHERE id=2;
-cqlsh:fun&amp;gt; SELECT * FROM test;
-
-id | data
-----+------
- 1 | null
-
-(1 rows)
-
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;&lt;img src=&#34;http://datanerds.io/img/wat/wat3.jpg&#34; alt=&#34;&#34; /&gt;&lt;/p&gt;
-
-&lt;p&gt;* Posted WAT&amp;rsquo;s have been tested with DSE 4.8.x and Apache Cassandra 2.1.x&lt;/p&gt;
-</description>
+      <guid>http://datanerds.io/post/wat-cassandra-1/</guid>
+      <description>&lt;p&gt;When using Cassandra*, you sometimes have these &lt;em&gt;WAT&lt;/em&gt; moments. If you don&amp;rsquo;t know what we are talking about, just take a short &lt;a href=&#34;https://www.destroyallsoftware.com/talks/wat&#34;&gt;detour&lt;/a&gt;.&lt;/p&gt;&#xA;&lt;p&gt;Taking a step back and figuring out what things are built for is usually a good idea, so what was Cassandra envisioned for?&lt;/p&gt;&#xA;&lt;blockquote&gt;&#xA;&lt;p&gt;Cassandra does not support a full relational data model; instead, it provides clients with a simple data model that supports dynamic control over data layout and format.&lt;/p&gt;</description>
     </item>
-    
   </channel>
 </rss>

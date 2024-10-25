@@ -79,76 +79,46 @@
       </div>
     </div>
     <article>
-      
-
-<p><strong>TL;DR</strong> Cassandra <strong><em>is not</em></strong> row level consistent!!!</p>
-
-<p>We published a <a href="/post/WAT-cassandra-1/">blog post</a> about some surprising and unexpected behaviors while using Apache Cassandra/DataStax Enterprise some weeks back. Recently, we encountered even more WAT moments and I believe this one is the most distressing.</p>
-
+      <p><strong>TL;DR</strong> Cassandra <strong><em>is not</em></strong> row level consistent!!!</p>
+<p>We published a <a href="/post/wat-cassandra-1/">blog post</a> about some surprising and unexpected behaviors while using Apache Cassandra/DataStax Enterprise some weeks back. Recently, we encountered even more WAT moments and I believe this one is the most distressing.</p>
 <p>In a nutshell: <strong>We discovered corrupted data</strong> and it took us a while to understand what was happening and why that data was corrupt. Let&rsquo;s dive into the problem:</p>
-
 <p>Imagine a table with a primary key to identify an entity. Each entity can have a boolean state to mark it as locked. Additionally, each entity has a revision counter which is incremented on changes to the entity.</p>
-
-<pre><code class="language-sql">CREATE TABLE locks (
-    id text PRIMARY KEY,
-    lock boolean,
-    revision bigint
-);
-</code></pre>
-
-<p>For an initial lock of the entity &lsquo;Tom&rsquo; we execute an <code>INSERT</code>. Since we need to make sure that no one else is obtaining the lock at the same time we make use of a Lightweight transaction (LWT) using <code>IF NOT EXISTS</code>. It is possible that something goes wrong or our application even dies before releasing the lock, resulting in deadlocked entities where <code>lock</code> stays <code>true</code>. To ensure that the lock is released in such a case, we release the lock after a certain amount of time. This is achieved by using Cassandra&rsquo;s Time To Live (<code>TTL</code>) feature.</p>
-
-<pre><code class="language-sql">INSERT INTO locks (id, lock, revision)
-VALUES ('Tom', true, 1)
-IF NOT EXISTS USING TTL 20;
-</code></pre>
-
-<p>Great! After finishing some other calculations for our entity Tom, we release the lock via a simple UPDATE:</p>
-
-<pre><code class="language-sql">UPDATE locks SET lock=false, revision=2 WHERE id='Tom';
-</code></pre>
-
-<p>The result should look like this:</p>
-
-<pre><code class="language-sql">SELECT * FROM locks WHERE id='Tom';
-
- id  | lock  | revision
------+-------+----------
- Tom | False |        2
-</code></pre>
-
-<p>To our surprise this was not always the case. In ~0.1% of the rows the result looked like this:</p>
-
-<pre><code class="language-sql">SELECT * FROM locks WHERE id='Tom';
-
- id  | lock | revision
------+------+----------
- Tom | null |        2
-</code></pre>
-
-<p>Given the queries we are using, the row should not be in a state where lock is null and a revision is set at the same time.</p>
-
-<p>After deeper investigations of audit logs and a deep dive into the SSTables it turned out that we did run into a timestamp tie. The cluster node our client is talking to sees a stream of changes with two or more changes happening to the same entry in the lock table at the exact same time. Obviously the calculation we are doing in between acquiring the lock and releasing it is not taking enough time (microseconds). Interesting, so what is the resolution strategy for multiple updates at the same time? <em>&ldquo;[&hellip;] if there are two updates, the one with the lexically larger value is selected. [&hellip;]&rdquo;</em> [1]</p>
-
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">CREATE</span> <span style="color:#66d9ef">TABLE</span> locks (
+</span></span><span style="display:flex;"><span>    id text <span style="color:#66d9ef">PRIMARY</span> <span style="color:#66d9ef">KEY</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">lock</span> boolean,
+</span></span><span style="display:flex;"><span>    revision bigint
+</span></span><span style="display:flex;"><span>);
+</span></span></code></pre></div><p>For an initial lock of the entity &lsquo;Tom&rsquo; we execute an <code>INSERT</code>. Since we need to make sure that no one else is obtaining the lock at the same time we make use of a Lightweight transaction (LWT) using <code>IF NOT EXISTS</code>. It is possible that something goes wrong or our application even dies before releasing the lock, resulting in deadlocked entities where <code>lock</code> stays <code>true</code>. To ensure that the lock is released in such a case, we release the lock after a certain amount of time. This is achieved by using Cassandra&rsquo;s Time To Live (<code>TTL</code>) feature.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">INSERT</span> <span style="color:#66d9ef">INTO</span> locks (id, <span style="color:#66d9ef">lock</span>, revision)
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">VALUES</span> (<span style="color:#e6db74">&#39;Tom&#39;</span>, <span style="color:#66d9ef">true</span>, <span style="color:#ae81ff">1</span>)
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">IF</span> <span style="color:#66d9ef">NOT</span> <span style="color:#66d9ef">EXISTS</span> <span style="color:#66d9ef">USING</span> TTL <span style="color:#ae81ff">20</span>;
+</span></span></code></pre></div><p>Great! After finishing some other calculations for our entity Tom, we release the lock via a simple UPDATE:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">UPDATE</span> locks <span style="color:#66d9ef">SET</span> <span style="color:#66d9ef">lock</span><span style="color:#f92672">=</span><span style="color:#66d9ef">false</span>, revision<span style="color:#f92672">=</span><span style="color:#ae81ff">2</span> <span style="color:#66d9ef">WHERE</span> id<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;Tom&#39;</span>;
+</span></span></code></pre></div><p>The result should look like this:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span> <span style="color:#f92672">*</span> <span style="color:#66d9ef">FROM</span> locks <span style="color:#66d9ef">WHERE</span> id<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;Tom&#39;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span> id  <span style="color:#f92672">|</span> <span style="color:#66d9ef">lock</span>  <span style="color:#f92672">|</span> revision
+</span></span><span style="display:flex;"><span><span style="color:#75715e">-----+-------+----------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span> Tom <span style="color:#f92672">|</span> <span style="color:#66d9ef">False</span> <span style="color:#f92672">|</span>        <span style="color:#ae81ff">2</span>
+</span></span></code></pre></div><p>To our surprise this was not always the case. In ~0.1% of the rows the result looked like this:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span> <span style="color:#f92672">*</span> <span style="color:#66d9ef">FROM</span> locks <span style="color:#66d9ef">WHERE</span> id<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;Tom&#39;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span> id  <span style="color:#f92672">|</span> <span style="color:#66d9ef">lock</span> <span style="color:#f92672">|</span> revision
+</span></span><span style="display:flex;"><span><span style="color:#75715e">-----+------+----------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span> Tom <span style="color:#f92672">|</span> <span style="color:#66d9ef">null</span> <span style="color:#f92672">|</span>        <span style="color:#ae81ff">2</span>
+</span></span></code></pre></div><p>Given the queries we are using, the row should not be in a state where lock is null and a revision is set at the same time.</p>
+<p>After deeper investigations of audit logs and a deep dive into the SSTables it turned out that we did run into a timestamp tie. The cluster node our client is talking to sees a stream of changes with two or more changes happening to the same entry in the lock table at the exact same time. Obviously the calculation we are doing in between acquiring the lock and releasing it is not taking enough time (microseconds). Interesting, so what is the resolution strategy for multiple updates at the same time? <em>&quot;[&hellip;] if there are two updates, the one with the lexically larger value is selected. [&hellip;]&quot;</em> [1]</p>
 <p><strong>lexical larger value? LEXICAL LARGER VALUE??</strong></p>
-
 <p>So what happens to our statements? When the acquire and release of the lock happen at the same exact time, Cassandra will compare on <strong><em>cell level</em></strong>, I repeat, <strong><em>CELL LEVEL</em></strong> which one is greater and will choose the value for this cell from the query for the final state. For the lock column this means: <code>true &gt; false</code> so it will take that portion of the <code>INSERT</code>. For the revision column the <code>UPDATE</code> query will win since <code>2 &gt; 1</code>. Due to the usage of <code>TTL</code> its content will be removed after 20 seconds&hellip; hence the column for lock will become <code>null</code>, #$@&amp;%!!! There is no row level consistency in Cassandra, #$@&amp;%!!!</p>
-
-<p><img src="/img/wat/wat7.jpg" alt="" /></p>
-
+<p><img src="/img/wat/wat7.jpg" alt=""></p>
 <h3 id="workaround">Workaround</h3>
-
 <p>The latter release <code>UPDATE</code> will also be executed using LWT. When a tie happens using LWT it will return with <code>applied = false</code>. In these cases we just retry the release query&hellip;</p>
-
-<p><img src="/img/mindblown.gif" alt="" /></p>
-
+<p><img src="/img/mindblown.gif" alt=""></p>
 <h3 id="possible-cassandra-improvements">Possible Cassandra Improvements</h3>
-
 <ol>
 <li>The server should log timestamp ties. We were just lucky to find the glitch in the data: <a href="https://issues.apache.org/jira/browse/CASSANDRA-12587">https://issues.apache.org/jira/browse/CASSANDRA-12587</a></li>
 <li>Since the origin of the competing query is the same process, a sequence number should be sufficient to define order: <a href="https://issues.apache.org/jira/browse/CASSANDRA-6123">https://issues.apache.org/jira/browse/CASSANDRA-6123</a></li>
 </ol>
-
 <p>[1] - <a href="http://cassandra.apache.org/doc/latest/faq/index.html#what-happens-if-two-updates-are-made-with-the-same-timestamp">http://cassandra.apache.org/doc/latest/faq/index.html#what-happens-if-two-updates-are-made-with-the-same-timestamp</a></p>
 
 
@@ -175,8 +145,8 @@ IF NOT EXISTS USING TTL 20;
 
   <nav class="pagination-single">
     
+    <span class="previous">&larr; <a href="http://datanerds.io/post/wat-cassandra-1/" rel="next">WAT - Cassandra</a></span>
     
-    <span class="next"><a href="http://datanerds.io/post/WAT-cassandra-1/" rel="prev">WAT - Cassandra</a>&rarr; </span>
     
   </nav>
 
